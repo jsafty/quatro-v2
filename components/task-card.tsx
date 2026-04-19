@@ -112,7 +112,7 @@ export function TaskCard({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <p
-            className={`font-bold text-base leading-snug ${
+            className={`font-normal text-base leading-snug ${
               completed ? "line-through text-muted-foreground" : "text-primary"
             }`}
           >
