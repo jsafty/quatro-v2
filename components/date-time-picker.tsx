@@ -150,7 +150,13 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
     },
     {
       label: "Next week",
-      action() { const d = new Date(); d.setDate(d.getDate() + 7); goToTime(d, false); },
+      action() {
+        const d = new Date();
+        const day = d.getDay(); // 0=Sun … 6=Sat
+        const daysUntilMonday = (8 - day) % 7 || 7;
+        d.setDate(d.getDate() + daysUntilMonday);
+        goToTime(d, false);
+      },
     },
     {
       label: "Custom",
