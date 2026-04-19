@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -54,10 +55,15 @@ export function NavSidebar() {
 
   return (
     <aside className="hidden md:flex flex-col w-52 shrink-0 min-h-screen bg-primary text-white">
-      <div className="px-6 py-7 border-b border-white/10">
-        <span className="text-xl font-extrabold" style={{ letterSpacing: "-0.025em" }}>
-          Quatro
-        </span>
+      <div className="px-6 py-5 border-b border-white/10">
+        <Image
+          src="/logo-full.png"
+          alt="Quatro"
+          width={120}
+          height={70}
+          className="w-auto h-8"
+          priority
+        />
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">

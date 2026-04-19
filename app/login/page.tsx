@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,15 +59,14 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
-          <h1
-            className="text-3xl font-extrabold tracking-tight text-primary"
-            style={{ letterSpacing: "-0.025em" }}
-          >
-            Quatro
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Focus on what matters. Only 4 things at a time.
-          </p>
+          <Image
+            src="/logo-full.png"
+            alt="Quatro"
+            width={220}
+            height={129}
+            className="mx-auto"
+            priority
+          />
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
