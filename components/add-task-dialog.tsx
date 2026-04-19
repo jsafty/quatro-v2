@@ -84,7 +84,7 @@ export function AddTaskDialog() {
         <Plus size={24} strokeWidth={2.5} />
       </DialogTrigger>
 
-      <DialogContent className="max-w-md rounded-2xl">
+      <DialogContent className="max-w-md rounded-2xl overflow-hidden">
         <DialogHeader>
           <DialogTitle className="text-primary text-xl font-bold">New task</DialogTitle>
         </DialogHeader>
@@ -105,7 +105,7 @@ export function AddTaskDialog() {
             />
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 min-w-0 overflow-hidden">
             <Label htmlFor="task-desc" className={labelClass}>Description</Label>
             <Textarea
               id="task-desc"
@@ -113,7 +113,7 @@ export function AddTaskDialog() {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Any additional context…"
               rows={2}
-              className={`${inputClass} resize-none`}
+              className={`${inputClass} resize-none w-full max-w-full break-all whitespace-pre-wrap box-border`}
             />
           </div>
 
