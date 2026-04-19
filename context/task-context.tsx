@@ -123,6 +123,28 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     };
   }, [fetchTasks, supabase]);
 
+  // When a scheduled task's start date passes, promote it to the top of the list
+  useEffect(() => {
+    const now = new Date();
+    const transitioning = tasks.filter((t) => {
+      if (!t.startDate || t.manualPriority !== null || t.completedAt) return false;
+      if (new Date(t.startDate) > now) return false;
+      if (t.blockedBy) {
+        const blocker = tasks.find((b) => b.id === t.blockedBy);
+        if (blocker && !blocker.completedAt) return false;
+      }
+      return true;
+    });
+
+    if (transitioning.length === 0) return;
+
+    Promise.all(
+      transitioning.map((t) =>
+        supabase.from("tasks").update({ manual_priority: 0 }).eq("id", t.id)
+      )
+    ).then(() => fetchTasks());
+  }, [tasks, supabase, fetchTasks]);
+
   // Section filtering
   const isScheduled = (t: Task) =>
     !!t.startDate && new Date(t.startDate) > new Date();

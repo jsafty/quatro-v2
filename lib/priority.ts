@@ -20,7 +20,9 @@ export function computePriority(task: Task): number {
 export function sortTasks(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => {
     if (a.manualPriority !== null && b.manualPriority !== null) {
-      return a.manualPriority - b.manualPriority;
+      const diff = a.manualPriority - b.manualPriority;
+      if (diff !== 0) return diff;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     }
     if (a.manualPriority !== null) return -1;
     if (b.manualPriority !== null) return 1;
