@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,8 +13,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useTasks } from "@/context/task-context";
+import { useTags } from "@/context/tag-context";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { RecurrencePicker } from "@/components/recurrence-picker";
+
+const TAG_COLORS = [
+  { value: "#077ec0", label: "Blue" },
+  { value: "#57c7e4", label: "Sky" },
+  { value: "#263573", label: "Navy" },
+  { value: "#2d8a4e", label: "Green" },
+  { value: "#e53e3e", label: "Red" },
+  { value: "#f6891f", label: "Orange" },
+  { value: "#be3192", label: "Pink" },
+];
 
 export function AddTaskDialog() {
   const [open, setOpen] = useState(false);
@@ -24,9 +35,15 @@ export function AddTaskDialog() {
   const [dueDate, setDueDate] = useState("");
   const [blockedBy, setBlockedBy] = useState("");
   const [recurrence, setRecurrence] = useState("");
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [creatingTag, setCreatingTag] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0].value);
+  const [savingTag, setSavingTag] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const { createTask, tasks } = useTasks();
+  const { tags, createTag } = useTags();
   const incompleteTasks = tasks.filter((t) => !t.completedAt);
 
   useEffect(() => {
@@ -49,6 +66,27 @@ export function AddTaskDialog() {
     setDueDate("");
     setBlockedBy("");
     setRecurrence("");
+    setSelectedTagIds([]);
+    setCreatingTag(false);
+    setNewTagName("");
+    setNewTagColor(TAG_COLORS[0].value);
+  }
+
+  function toggleTag(tagId: string) {
+    setSelectedTagIds((prev) =>
+      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
+    );
+  }
+
+  async function handleCreateTag() {
+    if (!newTagName.trim() || savingTag) return;
+    setSavingTag(true);
+    const newId = await createTag(newTagName.trim(), newTagColor);
+    if (newId) setSelectedTagIds((prev) => [...prev, newId]);
+    setNewTagName("");
+    setNewTagColor(TAG_COLORS[0].value);
+    setCreatingTag(false);
+    setSavingTag(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -62,6 +100,7 @@ export function AddTaskDialog() {
       dueDate: dueDate || null,
       blockedBy: blockedBy || null,
       recurrence: recurrence || null,
+      tagIds: selectedTagIds,
     });
     setOpen(false);
     reset();
@@ -155,6 +194,108 @@ export function AddTaskDialog() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className={labelClass}>Tags</Label>
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1.5 min-h-[28px]">
+                {tags.map((tag) => {
+                  const selected = selectedTagIds.includes(tag.id);
+                  return selected ? (
+                    <span
+                      key={tag.id}
+                      className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: tag.color + "33", color: tag.color }}
+                    >
+                      {tag.name}
+                      <button
+                        type="button"
+                        onClick={() => toggleTag(tag.id)}
+                        className="hover:opacity-70 transition-opacity"
+                        aria-label={`Remove ${tag.name}`}
+                      >
+                        <X size={10} strokeWidth={2.5} />
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleTag(tag.id)}
+                      className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border border-dashed transition-opacity hover:opacity-70"
+                      style={{ borderColor: tag.color + "88", color: tag.color }}
+                    >
+                      <Plus size={10} strokeWidth={2.5} />
+                      {tag.name}
+                    </button>
+                  );
+                })}
+                {!creatingTag && (
+                  <button
+                    type="button"
+                    onClick={() => setCreatingTag(true)}
+                    className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-quatro-blue hover:text-quatro-blue transition-colors"
+                  >
+                    <Plus size={10} strokeWidth={2.5} />
+                    New tag
+                  </button>
+                )}
+              </div>
+
+              {creatingTag && (
+                <div className="bg-muted rounded-lg p-3 space-y-2.5">
+                  <input
+                    type="text"
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    placeholder="Tag name"
+                    autoFocus
+                    maxLength={24}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { e.preventDefault(); handleCreateTag(); }
+                      if (e.key === "Escape") { setCreatingTag(false); setNewTagName(""); }
+                    }}
+                    className="w-full bg-white rounded-md px-3 py-1.5 text-sm text-primary border-0 focus:outline-none focus:ring-1 focus:ring-quatro-blue"
+                  />
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-1.5">
+                      {TAG_COLORS.map((c) => (
+                        <button
+                          key={c.value}
+                          type="button"
+                          onClick={() => setNewTagColor(c.value)}
+                          className="w-5 h-5 rounded-full transition-transform hover:scale-110"
+                          style={{
+                            backgroundColor: c.value,
+                            outline: newTagColor === c.value ? `2px solid ${c.value}` : "none",
+                            outlineOffset: "2px",
+                          }}
+                          aria-label={c.label}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => { setCreatingTag(false); setNewTagName(""); }}
+                        className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCreateTag}
+                        disabled={!newTagName.trim() || savingTag}
+                        className="text-xs font-bold text-primary hover:text-quatro-blue transition-colors disabled:opacity-40"
+                      >
+                        {savingTag ? "Saving…" : "Create"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

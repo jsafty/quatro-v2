@@ -15,6 +15,7 @@ export type CreateTaskInput = {
   dueDate?: string | null;
   blockedBy?: string | null;
   recurrence?: string | null;
+  tagIds?: string[];
 };
 
 export type UpdateTaskInput = {
@@ -155,8 +156,10 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    const newId = crypto.randomUUID();
+
     const { error: insertError } = await supabase.from("tasks").insert({
-      id: crypto.randomUUID(),
+      id: newId,
       user_id: user.id,
       title: input.title,
       description: input.description ?? null,
@@ -173,6 +176,12 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       console.error("createTask: insert failed", insertError);
       toast.error("Failed to add task.");
       return;
+    }
+
+    if (input.tagIds && input.tagIds.length > 0) {
+      await supabase.from("task_tags").insert(
+        input.tagIds.map((tagId) => ({ task_id: newId, tag_id: tagId }))
+      );
     }
 
     await fetchTasks();
