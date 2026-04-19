@@ -84,7 +84,7 @@ export function AddTaskDialog() {
         <Plus size={24} strokeWidth={2.5} />
       </DialogTrigger>
 
-      <DialogContent className="max-w-md rounded-2xl overflow-hidden">
+      <DialogContent className="w-[calc(100%-2rem)] sm:w-auto sm:max-w-md rounded-2xl overflow-hidden box-border">
         <DialogHeader>
           <DialogTitle className="text-primary text-xl font-bold">New task</DialogTitle>
         </DialogHeader>

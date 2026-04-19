@@ -73,7 +73,7 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100%-2rem)] sm:w-auto sm:max-w-md rounded-2xl max-h-[90vh] overflow-y-auto box-border">
         <DialogHeader>
           <DialogTitle className="text-primary text-xl font-bold">
             Edit task
