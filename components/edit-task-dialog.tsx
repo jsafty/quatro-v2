@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TagSelector } from "@/components/tag-selector";
+import { DateTimePicker } from "@/components/date-time-picker";
+import { RecurrencePicker } from "@/components/recurrence-picker";
 import { useTasks } from "@/context/task-context";
 import type { Task } from "@/types/task";
 
@@ -26,6 +28,7 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
   const [startDate, setStartDate] = useState(task.startDate ?? "");
   const [dueDate, setDueDate] = useState(task.dueDate ?? "");
   const [blockedBy, setBlockedBy] = useState(task.blockedBy ?? "");
+  const [recurrence, setRecurrence] = useState(task.recurrence ?? "");
   const [submitting, setSubmitting] = useState(false);
 
   const { updateTask, deleteTask, addTagToTask, removeTagFromTask, tasks } = useTasks();
@@ -39,6 +42,7 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
       setStartDate(task.startDate ?? "");
       setDueDate(task.dueDate ?? "");
       setBlockedBy(task.blockedBy ?? "");
+      setRecurrence(task.recurrence ?? "");
     }
   }, [open, task]);
 
@@ -52,6 +56,7 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
       startDate: startDate || null,
       dueDate: dueDate || null,
       blockedBy: blockedBy || null,
+      recurrence: recurrence || null,
     });
     onOpenChange(false);
     setSubmitting(false);
@@ -102,27 +107,27 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-start" className={labelClass}>Start date</Label>
-              <Input
-                id="edit-start"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-due" className={labelClass}>Due date</Label>
-              <Input
-                id="edit-due"
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className={inputClass}
-              />
-            </div>
+          <div className="space-y-1.5">
+            <Label className={labelClass}>Start date</Label>
+            <DateTimePicker
+              value={startDate || null}
+              onChange={(v) => { setStartDate(v ?? ""); if (!v) setRecurrence(""); }}
+              placeholder="Not scheduled"
+            />
+            <RecurrencePicker
+              value={recurrence}
+              onChange={setRecurrence}
+              disabled={!startDate}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className={labelClass}>Due date</Label>
+            <DateTimePicker
+              value={dueDate || null}
+              onChange={(v) => setDueDate(v ?? "")}
+              placeholder="No due date"
+            />
           </div>
 
           <div className="space-y-1.5">

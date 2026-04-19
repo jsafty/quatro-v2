@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import {
   Dialog,
@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useTasks } from "@/context/task-context";
+import { DateTimePicker } from "@/components/date-time-picker";
+import { RecurrencePicker } from "@/components/recurrence-picker";
 
 export function AddTaskDialog() {
   const [open, setOpen] = useState(false);
@@ -21,10 +23,24 @@ export function AddTaskDialog() {
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [blockedBy, setBlockedBy] = useState("");
+  const [recurrence, setRecurrence] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const { createTask, tasks } = useTasks();
   const incompleteTasks = tasks.filter((t) => !t.completedAt);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== " ") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if ((e.target as HTMLElement).isContentEditable) return;
+      e.preventDefault();
+      setOpen(true);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   function reset() {
     setTitle("");
@@ -32,6 +48,7 @@ export function AddTaskDialog() {
     setStartDate("");
     setDueDate("");
     setBlockedBy("");
+    setRecurrence("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -44,6 +61,7 @@ export function AddTaskDialog() {
       startDate: startDate || null,
       dueDate: dueDate || null,
       blockedBy: blockedBy || null,
+      recurrence: recurrence || null,
     });
     setOpen(false);
     reset();
@@ -55,9 +73,15 @@ export function AddTaskDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
-      <DialogTrigger className="inline-flex items-center gap-2 bg-primary hover:bg-quatro-blue text-white font-bold rounded-lg px-4 py-2 text-sm transition-colors cursor-pointer">
+      {/* Desktop button */}
+      <DialogTrigger className="hidden md:inline-flex items-center gap-2 bg-primary hover:bg-quatro-blue text-white font-bold rounded-lg px-4 py-2 text-sm transition-colors cursor-pointer">
         <Plus size={16} />
         Add task
+      </DialogTrigger>
+
+      {/* Mobile FAB */}
+      <DialogTrigger className="md:hidden fixed bottom-20 right-4 z-40 w-14 h-14 bg-primary hover:bg-quatro-blue text-white rounded-full shadow-lg flex items-center justify-center transition-colors cursor-pointer">
+        <Plus size={24} strokeWidth={2.5} />
       </DialogTrigger>
 
       <DialogContent className="max-w-md rounded-2xl">
@@ -93,27 +117,27 @@ export function AddTaskDialog() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="task-start" className={labelClass}>Start date</Label>
-              <Input
-                id="task-start"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="task-due" className={labelClass}>Due date</Label>
-              <Input
-                id="task-due"
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className={inputClass}
-              />
-            </div>
+          <div className="space-y-1.5">
+            <Label className={labelClass}>Start date</Label>
+            <DateTimePicker
+              value={startDate || null}
+              onChange={(v) => { setStartDate(v ?? ""); if (!v) setRecurrence(""); }}
+              placeholder="Not scheduled"
+            />
+            <RecurrencePicker
+              value={recurrence}
+              onChange={setRecurrence}
+              disabled={!startDate}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className={labelClass}>Due date</Label>
+            <DateTimePicker
+              value={dueDate || null}
+              onChange={(v) => setDueDate(v ?? "")}
+              placeholder="No due date"
+            />
           </div>
 
           <div className="space-y-1.5">

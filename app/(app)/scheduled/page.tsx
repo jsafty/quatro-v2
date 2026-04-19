@@ -8,10 +8,10 @@ import { AddTaskDialog } from "@/components/add-task-dialog";
 import { TagFilterBar } from "@/components/tag-filter-bar";
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+  const d = new Date(dateStr);
+  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return `${date} at ${time}`;
 }
 
 export default function ScheduledPage() {

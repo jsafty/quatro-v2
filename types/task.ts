@@ -12,6 +12,7 @@ export interface Task {
   blockedBy: string | null;
   completedAt: string | null;
   manualPriority: number | null;
+  recurrence: string | null;
   createdAt: string;
   tags: Tag[];
 }

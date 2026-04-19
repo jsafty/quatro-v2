@@ -2,10 +2,19 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, GripVertical } from "lucide-react";
+import { Check, GripVertical, Repeat, Trash2 } from "lucide-react";
 import { useTasks } from "@/context/task-context";
 import { EditTaskDialog } from "@/components/edit-task-dialog";
+import { DateTimePicker } from "@/components/date-time-picker";
 import type { Task } from "@/types/task";
+
+const RECURRENCE_LABELS: Record<string, string> = {
+  daily:    "Daily",
+  weekday:  "Weekdays",
+  weekly:   "Weekly",
+  biweekly: "Every 2 weeks",
+  monthly:  "Monthly",
+};
 
 function rankBorderColor(rank?: number): string {
   if (!rank || rank > 4) return "var(--muted-foreground)";
@@ -15,16 +24,14 @@ function rankBorderColor(rank?: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+  const d = new Date(dateStr);
+  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return `${date} at ${time}`;
 }
 
 function isOverdue(dateStr: string): boolean {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return new Date(dateStr + "T00:00:00") < today;
+  return new Date(dateStr) < new Date();
 }
 
 interface TaskCardProps {
@@ -43,7 +50,7 @@ export function TaskCard({
   blockerTitle,
 }: TaskCardProps) {
   const [editOpen, setEditOpen] = useState(false);
-  const { completeTask, uncompleteTask } = useTasks();
+  const { completeTask, uncompleteTask, updateTask, deleteTask } = useTasks();
 
   function handleCompleteClick(e: React.MouseEvent) {
     e.stopPropagation();
@@ -82,6 +89,26 @@ export function TaskCard({
           {completed && <Check size={10} strokeWidth={3} />}
         </button>
 
+        {/* Hover actions — desktop only */}
+        <div
+          className="absolute top-2 right-2 hidden md:flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DateTimePicker
+            iconOnly
+            value={task.startDate}
+            onChange={(v) => updateTask(task.id, { startDate: v })}
+          />
+          <button
+            onClick={() => deleteTask(task.id)}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            aria-label="Delete task"
+            title="Delete task"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
+
         {/* Content */}
         <div className="flex-1 min-w-0">
           <p
@@ -118,6 +145,13 @@ export function TaskCard({
                 {tag.name}
               </span>
             ))}
+
+            {task.recurrence && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                <Repeat size={11} />
+                {RECURRENCE_LABELS[task.recurrence] ?? task.recurrence}
+              </span>
+            )}
 
             {startLabel && (
               <span className="text-xs font-medium text-quatro-blue">

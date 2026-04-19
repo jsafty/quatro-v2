@@ -4,17 +4,17 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { sortTasks } from "@/lib/priority";
+import { computeNextOccurrence } from "@/lib/recurrence";
 import type { Task } from "@/types/task";
 import type { Tag } from "@/types/tag";
 
 export type CreateTaskInput = {
   title: string;
   description?: string | null;
-  impact?: number | null;
-  effort?: number | null;
   startDate?: string | null;
   dueDate?: string | null;
   blockedBy?: string | null;
+  recurrence?: string | null;
 };
 
 export type UpdateTaskInput = {
@@ -24,6 +24,7 @@ export type UpdateTaskInput = {
   dueDate?: string | null;
   blockedBy?: string | null;
   manualPriority?: number | null;
+  recurrence?: string | null;
 };
 
 type TaskContextValue = {
@@ -68,6 +69,7 @@ function mapRow(row: Record<string, unknown>): Task {
     blockedBy: (row.blocked_by as string | null) ?? null,
     completedAt: (row.completed_at as string | null) ?? null,
     manualPriority: (row.manual_priority as number | null) ?? null,
+    recurrence: (row.recurrence as string | null) ?? null,
     createdAt: row.created_at as string,
     tags,
   };
@@ -121,11 +123,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   }, [fetchTasks, supabase]);
 
   // Section filtering
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
   const isScheduled = (t: Task) =>
-    !!t.startDate && new Date(t.startDate) > today;
+    !!t.startDate && new Date(t.startDate) > new Date();
 
   const isBlocked = (t: Task) => {
     if (!t.blockedBy) return false;
@@ -161,11 +160,10 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       user_id: user.id,
       title: input.title,
       description: input.description ?? null,
-      impact: input.impact ?? null,
-      effort: input.effort ?? null,
       start_date: input.startDate ?? null,
       due_date: input.dueDate ?? null,
       blocked_by: input.blockedBy ?? null,
+      recurrence: input.recurrence ?? null,
       completed_at: null,
       manual_priority: null,
       created_at: new Date().toISOString(),
@@ -190,6 +188,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     if ("dueDate" in input) update.due_date = input.dueDate ?? null;
     if ("blockedBy" in input) update.blocked_by = input.blockedBy ?? null;
     if ("manualPriority" in input) update.manual_priority = input.manualPriority ?? null;
+    if ("recurrence" in input) update.recurrence = input.recurrence ?? null;
 
     const { error } = await supabase.from("tasks").update(update).eq("id", id);
     if (error) {
@@ -211,11 +210,45 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function completeTask(id: string) {
+    const task = tasks.find((t) => t.id === id);
+
     const { error } = await supabase
       .from("tasks")
       .update({ completed_at: new Date().toISOString(), manual_priority: null })
       .eq("id", id);
-    if (error) toast.error("Failed to complete task.");
+    if (error) {
+      toast.error("Failed to complete task.");
+      await fetchTasks();
+      return;
+    }
+
+    // Spawn next occurrence for recurring tasks
+    if (task?.recurrence && task.startDate) {
+      const nextStart = computeNextOccurrence(task.startDate, task.recurrence);
+      const newId = crypto.randomUUID();
+
+      await supabase.from("tasks").insert({
+        id: newId,
+        user_id: task.userId,
+        title: task.title,
+        description: task.description ?? null,
+        start_date: nextStart,
+        due_date: null,
+        blocked_by: null,
+        recurrence: task.recurrence,
+        completed_at: null,
+        manual_priority: null,
+        created_at: new Date().toISOString(),
+      });
+
+      // Copy tags to new instance
+      if (task.tags.length > 0) {
+        await supabase.from("task_tags").insert(
+          task.tags.map((tag) => ({ task_id: newId, tag_id: tag.id }))
+        );
+      }
+    }
+
     await fetchTasks();
   }
 
