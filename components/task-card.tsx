@@ -66,7 +66,7 @@ export function TaskCard({
         exit={{ opacity: 0, y: -8 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
         onClick={() => setEditOpen(true)}
-        className="group relative bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border-l-4 p-4 flex gap-3 cursor-pointer"
+        className="group relative bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border-l-4 p-4 flex gap-3 cursor-pointer w-full min-w-0 overflow-hidden box-border"
         style={{ borderLeftColor: rankBorderColor(rank) }}
       >
         {/* Drag handle — wired up in drag-and-drop phase */}
@@ -112,7 +112,7 @@ export function TaskCard({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <p
-            className={`font-normal text-base leading-snug ${
+            className={`font-normal text-base leading-snug break-words min-w-0 ${
               completed ? "line-through text-muted-foreground" : "text-primary"
             }`}
           >
