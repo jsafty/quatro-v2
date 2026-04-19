@@ -57,7 +57,7 @@ export function NavSidebar() {
     <aside className="hidden md:flex flex-col w-52 shrink-0 min-h-screen bg-primary text-white">
       <div className="px-6 py-5 border-b border-white/10">
         <Image
-          src="/logo-full.png"
+          src="/logo-full-white.png"
           alt="Quatro"
           width={120}
           height={70}
