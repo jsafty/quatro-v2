@@ -1,0 +1,183 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { TagSelector } from "@/components/tag-selector";
+import { useTasks } from "@/context/task-context";
+import type { Task } from "@/types/task";
+
+interface EditTaskDialogProps {
+  task: Task;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps) {
+  const [title, setTitle] = useState(task.title);
+  const [description, setDescription] = useState(task.description ?? "");
+  const [startDate, setStartDate] = useState(task.startDate ?? "");
+  const [dueDate, setDueDate] = useState(task.dueDate ?? "");
+  const [blockedBy, setBlockedBy] = useState(task.blockedBy ?? "");
+  const [submitting, setSubmitting] = useState(false);
+
+  const { updateTask, deleteTask, addTagToTask, removeTagFromTask, tasks } = useTasks();
+
+  const incompleteTasks = tasks.filter((t) => !t.completedAt && t.id !== task.id);
+
+  useEffect(() => {
+    if (open) {
+      setTitle(task.title);
+      setDescription(task.description ?? "");
+      setStartDate(task.startDate ?? "");
+      setDueDate(task.dueDate ?? "");
+      setBlockedBy(task.blockedBy ?? "");
+    }
+  }, [open, task]);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim() || submitting) return;
+    setSubmitting(true);
+    await updateTask(task.id, {
+      title: title.trim(),
+      description: description.trim() || null,
+      startDate: startDate || null,
+      dueDate: dueDate || null,
+      blockedBy: blockedBy || null,
+    });
+    onOpenChange(false);
+    setSubmitting(false);
+  }
+
+  async function handleDelete() {
+    await deleteTask(task.id);
+    onOpenChange(false);
+  }
+
+  const inputClass =
+    "bg-muted border-0 focus-visible:ring-1 focus-visible:ring-quatro-blue rounded-lg text-sm";
+  const labelClass = "text-sm font-semibold text-primary";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md rounded-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-primary text-xl font-bold">
+            Edit task
+          </DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSave} className="space-y-4 mt-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-title" className={labelClass}>
+              Summary <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="edit-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              autoFocus
+              className={inputClass}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-desc" className={labelClass}>Description</Label>
+            <Textarea
+              id="edit-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Any additional context…"
+              rows={2}
+              className={`${inputClass} resize-none`}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-start" className={labelClass}>Start date</Label>
+              <Input
+                id="edit-start"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-due" className={labelClass}>Due date</Label>
+              <Input
+                id="edit-due"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-blocked" className={labelClass}>Blocked by</Label>
+            <select
+              id="edit-blocked"
+              value={blockedBy}
+              onChange={(e) => setBlockedBy(e.target.value)}
+              className="w-full bg-muted border-0 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-quatro-blue"
+            >
+              <option value="">None</option>
+              {incompleteTasks.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className={labelClass}>Tags</Label>
+            <TagSelector
+              task={task}
+              onAdd={(tagId) => addTagToTask(task.id, tagId)}
+              onRemove={(tagId) => removeTagFromTask(task.id, tagId)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="px-4 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+            >
+              Delete task
+            </button>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!title.trim() || submitting}
+                className="px-4 py-2 text-sm font-bold bg-primary hover:bg-quatro-blue text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
