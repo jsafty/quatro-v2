@@ -37,16 +37,14 @@ export default function TasksPage() {
   const allActionable = [...top4, ...backlog];
   const allIds = allActionable.map((t) => t.id);
 
-  // Filtered views for display (tag filter doesn't change drag logic)
-  const filteredTop4 =
+  // Apply tag filter then re-split into Top 4 / Backlog
+  const filteredActionable =
     selectedTagIds.length === 0
-      ? top4
-      : top4.filter((t) => t.tags.some((tag) => selectedTagIds.includes(tag.id)));
+      ? allActionable
+      : allActionable.filter((t) => t.tags.some((tag) => selectedTagIds.includes(tag.id)));
 
-  const filteredBacklog =
-    selectedTagIds.length === 0
-      ? backlog
-      : backlog.filter((t) => t.tags.some((tag) => selectedTagIds.includes(tag.id)));
+  const filteredTop4 = filteredActionable.slice(0, 4);
+  const filteredBacklog = filteredActionable.slice(4);
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
