@@ -95,7 +95,7 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
             />
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 min-w-0 overflow-hidden">
             <Label htmlFor="edit-desc" className={labelClass}>Description</Label>
             <Textarea
               id="edit-desc"
@@ -103,7 +103,7 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Any additional context…"
               rows={2}
-              className={`${inputClass} resize-none`}
+              className={`${inputClass} resize-none w-full max-w-full break-all whitespace-pre-wrap box-border`}
             />
           </div>
 
