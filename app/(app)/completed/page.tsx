@@ -5,6 +5,7 @@ import { useTasks } from "@/context/task-context";
 import { useTags } from "@/context/tag-context";
 import { TaskCard } from "@/components/task-card";
 import { TagFilterBar } from "@/components/tag-filter-bar";
+import { MobileFilterTrigger, MobileFilterPills } from "@/components/mobile-filter-sheet";
 
 export default function CompletedPage() {
   const { completedTasks, loading } = useTasks();
@@ -17,14 +18,18 @@ export default function CompletedPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-extrabold text-primary tracking-tight" style={{ letterSpacing: "-0.025em" }}>
-          Completed
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-3xl font-extrabold text-primary tracking-tight" style={{ letterSpacing: "-0.025em" }}>
+            Completed
+          </h1>
+          <MobileFilterTrigger />
+        </div>
         <p className="text-sm text-muted-foreground mt-0.5">
           Tasks you&apos;ve finished.
         </p>
       </div>
 
+      <MobileFilterPills />
       <TagFilterBar />
 
       {loading ? (

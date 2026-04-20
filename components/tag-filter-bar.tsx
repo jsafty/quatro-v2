@@ -20,21 +20,10 @@ export function TagFilterBar() {
     await createTag(name, nextColor);
   }
 
-  if (tags.length === 0 && !addingTag) {
-    return (
-      <div className="mb-5 md:hidden">
-        <button
-          onClick={() => setAddingTag(true)}
-          className="text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
-        >
-          + Add tag
-        </button>
-      </div>
-    );
-  }
+  if (tags.length === 0 && !addingTag) return null;
 
   return (
-    <div className="flex items-center gap-2 flex-wrap mb-5">
+    <div className="hidden md:flex items-center gap-2 flex-wrap mb-5">
       {tags.map((tag) => {
         const active = selectedTagIds.includes(tag.id);
         return (
@@ -72,35 +61,6 @@ export function TagFilterBar() {
         </button>
       )}
 
-      {/* + Add tag — mobile only (desktop uses sidebar) */}
-      <div className="md:hidden">
-        {addingTag ? (
-          <input
-            type="text"
-            value={newTagName}
-            onChange={(e) => setNewTagName(e.target.value)}
-            placeholder="Tag name…"
-            autoFocus
-            maxLength={24}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); handleAddTag(); }
-              if (e.key === "Escape") { setAddingTag(false); setNewTagName(""); }
-            }}
-            onBlur={() => {
-              if (newTagName.trim()) handleAddTag();
-              else { setAddingTag(false); setNewTagName(""); }
-            }}
-            className="text-xs font-semibold px-3 py-1 rounded-full border border-dashed border-muted-foreground/40 text-primary bg-transparent outline-none focus:border-primary w-28"
-          />
-        ) : (
-          <button
-            onClick={() => setAddingTag(true)}
-            className="text-xs font-semibold px-3 py-1 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground hover:text-primary hover:border-primary transition-colors"
-          >
-            + Add tag
-          </button>
-        )}
-      </div>
     </div>
   );
 }

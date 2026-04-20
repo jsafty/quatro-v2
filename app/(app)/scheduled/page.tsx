@@ -6,6 +6,7 @@ import { useTags } from "@/context/tag-context";
 import { TaskCard } from "@/components/task-card";
 import { AddTaskDialog } from "@/components/add-task-dialog";
 import { TagFilterBar } from "@/components/tag-filter-bar";
+import { MobileFilterTrigger, MobileFilterPills } from "@/components/mobile-filter-sheet";
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
@@ -31,9 +32,12 @@ export default function ScheduledPage() {
     <div>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-extrabold text-primary tracking-tight" style={{ letterSpacing: "-0.025em" }}>
-            Scheduled
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-extrabold text-primary tracking-tight" style={{ letterSpacing: "-0.025em" }}>
+              Scheduled
+            </h1>
+            <MobileFilterTrigger />
+          </div>
           <p className="text-sm text-muted-foreground mt-0.5">
             Tasks with a future start date.
           </p>
@@ -41,6 +45,7 @@ export default function ScheduledPage() {
         <AddTaskDialog />
       </div>
 
+      <MobileFilterPills />
       <TagFilterBar />
 
       {loading ? (

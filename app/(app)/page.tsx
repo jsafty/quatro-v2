@@ -21,6 +21,7 @@ import { useTags } from "@/context/tag-context";
 import { SortableTaskCard } from "@/components/sortable-task-card";
 import { AddTaskDialog } from "@/components/add-task-dialog";
 import { TagFilterBar } from "@/components/tag-filter-bar";
+import { MobileFilterTrigger, MobileFilterPills } from "@/components/mobile-filter-sheet";
 
 export default function TasksPage() {
   const { top4, backlog, loading, reorderTasks } = useTasks();
@@ -61,12 +62,15 @@ export default function TasksPage() {
     <div>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1
-            className="text-3xl font-extrabold text-primary tracking-tight"
-            style={{ letterSpacing: "-0.025em" }}
-          >
-            Tasks
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1
+              className="text-3xl font-extrabold text-primary tracking-tight"
+              style={{ letterSpacing: "-0.025em" }}
+            >
+              Tasks
+            </h1>
+            <MobileFilterTrigger />
+          </div>
           <p className="text-sm text-muted-foreground mt-0.5">
             Your top 4 priorities and everything else.
           </p>
@@ -74,6 +78,7 @@ export default function TasksPage() {
         <AddTaskDialog />
       </div>
 
+      <MobileFilterPills />
       <TagFilterBar />
 
       {loading ? (
