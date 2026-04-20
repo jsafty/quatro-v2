@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useTasks } from "@/context/task-context";
 import { useTags } from "@/context/tag-context";
-import { CheckSquare, Clock, Lock, CheckCircle, LogOut, Tag, ChevronLeft, X } from "lucide-react";
+import { CheckSquare, Clock, Lock, CheckCircle, LogOut, Tag, ChevronLeft, X, Trash2 } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/",          label: "Tasks",     icon: CheckSquare, countKey: "actionable" as const },
@@ -135,7 +135,7 @@ export function NavSidebar() {
                       className="opacity-0 group-hover:opacity-100 transition-opacity rounded p-0.5 hover:bg-white/20"
                       aria-label={`Delete ${tag.name}`}
                     >
-                      <X size={12} />
+                      <Trash2 size={12} />
                     </button>
                   </div>
                 );
