@@ -35,6 +35,27 @@ function isOverdue(dateStr: string): boolean {
   return new Date(dateStr) < new Date();
 }
 
+function linkifyDescription(text: string) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return parts.map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="underline hover:opacity-70 transition-opacity break-all"
+        style={{ color: "var(--quatro-blue)" }}
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  );
+}
+
 interface TaskCardProps {
   task: Task;
   rank?: number;
@@ -146,7 +167,7 @@ export function TaskCard({
 
           {task.description && (
             <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-              {task.description}
+              {linkifyDescription(task.description)}
             </p>
           )}
 
