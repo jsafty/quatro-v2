@@ -32,7 +32,7 @@ export function AddTaskDialog() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
-  const [dueDate, setDueDate] = useState("");
+
   const [blockedBy, setBlockedBy] = useState("");
   const [recurrence, setRecurrence] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
@@ -63,7 +63,7 @@ export function AddTaskDialog() {
     setTitle("");
     setDescription("");
     setStartDate("");
-    setDueDate("");
+
     setBlockedBy("");
     setRecurrence("");
     setSelectedTagIds([]);
@@ -97,7 +97,7 @@ export function AddTaskDialog() {
       title: title.trim(),
       description: description.trim() || null,
       startDate: startDate || null,
-      dueDate: dueDate || null,
+      dueDate: null,
       blockedBy: blockedBy || null,
       recurrence: recurrence || null,
       tagIds: selectedTagIds,
@@ -167,15 +167,6 @@ export function AddTaskDialog() {
               value={recurrence}
               onChange={setRecurrence}
               disabled={!startDate}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className={labelClass}>Due date</Label>
-            <DateTimePicker
-              value={dueDate || null}
-              onChange={(v) => setDueDate(v ?? "")}
-              placeholder="No due date"
             />
           </div>
 

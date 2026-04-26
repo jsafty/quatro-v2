@@ -26,7 +26,7 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? "");
   const [startDate, setStartDate] = useState(task.startDate ?? "");
-  const [dueDate, setDueDate] = useState(task.dueDate ?? "");
+
   const [blockedBy, setBlockedBy] = useState(task.blockedBy ?? "");
   const [recurrence, setRecurrence] = useState(task.recurrence ?? "");
   const [submitting, setSubmitting] = useState(false);
@@ -40,7 +40,7 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
       setTitle(task.title);
       setDescription(task.description ?? "");
       setStartDate(task.startDate ?? "");
-      setDueDate(task.dueDate ?? "");
+
       setBlockedBy(task.blockedBy ?? "");
       setRecurrence(task.recurrence ?? "");
     }
@@ -54,7 +54,7 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
       title: title.trim(),
       description: description.trim() || null,
       startDate: startDate || null,
-      dueDate: dueDate || null,
+      dueDate: null,
       blockedBy: blockedBy || null,
       recurrence: recurrence || null,
     });
@@ -118,15 +118,6 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
               value={recurrence}
               onChange={setRecurrence}
               disabled={!startDate}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className={labelClass}>Due date</Label>
-            <DateTimePicker
-              value={dueDate || null}
-              onChange={(v) => setDueDate(v ?? "")}
-              placeholder="No due date"
             />
           </div>
 
