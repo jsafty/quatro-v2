@@ -37,11 +37,12 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [viewMonth, setViewMonth] = useState(now.getMonth());
 
-  // Time picker state (pending until user confirms)
+  // Time picker state
   const [pendingDate, setPendingDate] = useState<Date | null>(null);
   const [hour12, setHour12] = useState(8);
   const [minute, setMinute] = useState(0);
   const [ampm, setAmpm] = useState<"AM" | "PM">("AM");
+  const [prevValue, setPrevValue] = useState<string | null>(null);
 
   // Fixed-position dropdown coords (avoids clipping by dialog overflow-y-auto)
   const [dropdownStyle, setDropdownStyle] = useState({ top: 0, left: 0, width: 256 });
@@ -55,6 +56,7 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
     setHour12(8);
     setMinute(0);
     setAmpm("AM");
+    setPrevValue(null);
   }, []);
 
   function openPicker() {
@@ -91,24 +93,45 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
   }
 
   function goToTime(d: Date, fromCal: boolean) {
-    setPendingDate(d);
+    setPrevValue(value);
+    const date = new Date(d);
+    date.setHours(8, 0, 0, 0);
+    setPendingDate(date);
     setFromCalendar(fromCal);
     setHour12(8);
     setMinute(0);
     setAmpm("AM");
+    onChange(date.toISOString());
     setStep("time");
   }
 
-  function confirmTime() {
-    if (!pendingDate) return;
-    const d = new Date(pendingDate);
-    let h = hour12;
-    if (ampm === "AM" && h === 12) h = 0;
-    else if (ampm === "PM" && h !== 12) h += 12;
-    d.setHours(h, minute, 0, 0);
+  function applyTime(h12: number, min: number, ap: "AM" | "PM", base: Date) {
+    const d = new Date(base);
+    let h = h12;
+    if (ap === "AM" && h === 12) h = 0;
+    else if (ap === "PM" && h !== 12) h += 12;
+    d.setHours(h, min, 0, 0);
     onChange(d.toISOString());
-    setOpen(false);
-    reset();
+  }
+
+  function handleHourChange(h: number) {
+    setHour12(h);
+    if (pendingDate) applyTime(h, minute, ampm, pendingDate);
+  }
+
+  function handleMinuteChange(m: number) {
+    setMinute(m);
+    if (pendingDate) applyTime(hour12, m, ampm, pendingDate);
+  }
+
+  function handleAmpmChange(ap: "AM" | "PM") {
+    setAmpm(ap);
+    if (pendingDate) applyTime(hour12, minute, ap, pendingDate);
+  }
+
+  function handleTimeBack() {
+    onChange(prevValue);
+    setStep(fromCalendar ? "calendar" : "presets");
   }
 
   function prevMonth() {
@@ -304,7 +327,7 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
               <div className="flex items-center justify-center gap-2">
                 <select
                   value={hour12}
-                  onChange={(e) => setHour12(Number(e.target.value))}
+                  onChange={(e) => handleHourChange(Number(e.target.value))}
                   className="bg-muted rounded-lg px-2 py-2 text-sm font-bold text-primary outline-none focus:ring-1 focus:ring-quatro-blue cursor-pointer"
                 >
                   {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
@@ -314,7 +337,7 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
                 <span className="text-lg font-bold text-primary select-none">:</span>
                 <select
                   value={minute}
-                  onChange={(e) => setMinute(Number(e.target.value))}
+                  onChange={(e) => handleMinuteChange(Number(e.target.value))}
                   className="bg-muted rounded-lg px-2 py-2 text-sm font-bold text-primary outline-none focus:ring-1 focus:ring-quatro-blue cursor-pointer"
                 >
                   {[0, 15, 30, 45].map((m) => (
@@ -326,7 +349,7 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
                     <button
                       key={p}
                       type="button"
-                      onClick={() => setAmpm(p)}
+                      onClick={() => handleAmpmChange(p)}
                       className={`px-2.5 py-2 text-xs font-bold transition-colors ${
                         ampm === p ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"
                       }`}
@@ -340,17 +363,17 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setStep(fromCalendar ? "calendar" : "presets")}
+                  onClick={handleTimeBack}
                   className="flex-1 py-2 text-sm font-semibold text-muted-foreground hover:text-primary border border-border rounded-lg transition-colors"
                 >
                   Back
                 </button>
                 <button
                   type="button"
-                  onClick={confirmTime}
+                  onClick={() => { setOpen(false); reset(); }}
                   className="flex-1 py-2 text-sm font-bold bg-primary text-white rounded-lg hover:bg-quatro-blue transition-colors"
                 >
-                  Set
+                  Done
                 </button>
               </div>
             </div>
