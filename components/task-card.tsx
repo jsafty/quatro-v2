@@ -101,13 +101,13 @@ export function TaskCard({
         transition={
           isCompleting
             ? {
-                opacity: { duration: 0.4, ease: "easeOut" },
-                x: { duration: 0.5, ease: [0.4, 0, 0.2, 1] },
+                opacity: { duration: 0.2, ease: "easeIn" },
+                x: { duration: 0.28, ease: [0.4, 0, 1, 1] },
               }
             : isUndoing
             ? {
-                opacity: { duration: 0.3, ease: "easeOut" },
-                x: { duration: 0.45, ease: [0.4, 0, 0.2, 1] },
+                opacity: { duration: 0.2, ease: "easeOut" },
+                x: { duration: 0.3, ease: [0.4, 0, 1, 1] },
               }
             : { duration: 0.2, ease: "easeOut" }
         }
