@@ -140,7 +140,7 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
               }}
               onBlur={() => { if (!subtaskInputValue.trim()) setShowSubtaskInput(false); }}
               placeholder="Sub-task name…"
-              className={inputClass}
+              className={`${inputClass} pl-3 pt-2 pb-2`}
             />
           ) : (
             <button
