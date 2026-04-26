@@ -31,6 +31,8 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
 
   const [blockedBy, setBlockedBy] = useState(task.blockedBy ?? "");
   const [recurrence, setRecurrence] = useState(task.recurrence ?? "");
+  const [showSubtaskInput, setShowSubtaskInput] = useState(false);
+  const [subtaskInputValue, setSubtaskInputValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const { updateTask, deleteTask, addTagToTask, removeTagFromTask, tasks,
@@ -43,9 +45,10 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
       setTitle(task.title);
       setDescription(task.description ?? "");
       setStartDate(task.startDate ?? "");
-
       setBlockedBy(task.blockedBy ?? "");
       setRecurrence(task.recurrence ?? "");
+      setShowSubtaskInput(false);
+      setSubtaskInputValue("");
     }
   }, [open, task]);
 
@@ -110,18 +113,44 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label className={labelClass}>Sub-tasks</Label>
-            <div className="bg-muted rounded-lg px-3 py-2">
+          {/* Subtasks — rendered inline below description */}
+          {task.subtasks.length > 0 && (
+            <div className="pl-0.5">
               <SubtaskList
                 subtasks={task.subtasks}
                 onToggle={toggleSubtask}
                 onDelete={deleteSubtask}
                 onUpdate={updateSubtask}
-                onAdd={(title) => createSubtask(task.id, title)}
               />
             </div>
-          </div>
+          )}
+          {showSubtaskInput ? (
+            <input
+              type="text"
+              autoFocus
+              value={subtaskInputValue}
+              onChange={(e) => setSubtaskInputValue(e.target.value)}
+              onKeyDown={async (e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const t = subtaskInputValue.trim();
+                  if (t) { await createSubtask(task.id, t); setSubtaskInputValue(""); }
+                }
+                if (e.key === "Escape") { setShowSubtaskInput(false); setSubtaskInputValue(""); }
+              }}
+              onBlur={() => { if (!subtaskInputValue.trim()) setShowSubtaskInput(false); }}
+              placeholder="Sub-task name…"
+              className={inputClass}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowSubtaskInput(true)}
+              className="text-sm text-muted-foreground hover:text-primary transition-colors -mt-1"
+            >
+              + Add a sub-task
+            </button>
+          )}
 
           <div className="space-y-1.5">
             <Label className={labelClass}>Start date</Label>

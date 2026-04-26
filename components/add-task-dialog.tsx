@@ -44,6 +44,8 @@ export function AddTaskDialog() {
   const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0].value);
   const [savingTag, setSavingTag] = useState(false);
   const [pendingSubtasks, setPendingSubtasks] = useState<Subtask[]>([]);
+  const [showSubtaskInput, setShowSubtaskInput] = useState(false);
+  const [subtaskInputValue, setSubtaskInputValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const { createTask, tasks } = useTasks();
@@ -71,6 +73,8 @@ export function AddTaskDialog() {
     setBlockedBy("");
     setRecurrence("");
     setPendingSubtasks([]);
+    setShowSubtaskInput(false);
+    setSubtaskInputValue("");
     setSelectedTagIds([]);
     setCreatingTag(false);
     setNewTagName("");
@@ -162,9 +166,9 @@ export function AddTaskDialog() {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label className={labelClass}>Sub-tasks</Label>
-            <div className="bg-muted rounded-lg px-3 py-2">
+          {/* Subtasks — rendered inline below description */}
+          {pendingSubtasks.length > 0 && (
+            <div className="pl-0.5">
               <SubtaskList
                 subtasks={pendingSubtasks}
                 onToggle={() => {}}
@@ -174,22 +178,42 @@ export function AddTaskDialog() {
                     prev.map((s) => (s.id === id ? { ...s, title } : s))
                   )
                 }
-                onAdd={(title) =>
-                  setPendingSubtasks((prev) => [
-                    ...prev,
-                    {
-                      id: crypto.randomUUID(),
-                      taskId: "",
-                      title,
-                      completedAt: null,
-                      position: prev.length,
-                      createdAt: new Date().toISOString(),
-                    },
-                  ])
-                }
               />
             </div>
-          </div>
+          )}
+          {showSubtaskInput ? (
+            <input
+              type="text"
+              autoFocus
+              value={subtaskInputValue}
+              onChange={(e) => setSubtaskInputValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const t = subtaskInputValue.trim();
+                  if (t) {
+                    setPendingSubtasks((prev) => [
+                      ...prev,
+                      { id: crypto.randomUUID(), taskId: "", title: t, completedAt: null, position: prev.length, createdAt: new Date().toISOString() },
+                    ]);
+                    setSubtaskInputValue("");
+                  }
+                }
+                if (e.key === "Escape") { setShowSubtaskInput(false); setSubtaskInputValue(""); }
+              }}
+              onBlur={() => { if (!subtaskInputValue.trim()) { setShowSubtaskInput(false); } }}
+              placeholder="Sub-task name…"
+              className={inputClass}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowSubtaskInput(true)}
+              className="text-sm text-muted-foreground hover:text-primary transition-colors -mt-1"
+            >
+              + Add a sub-task
+            </button>
+          )}
 
           <div className="space-y-1.5">
             <Label className={labelClass}>Start date</Label>

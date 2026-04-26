@@ -9,7 +9,6 @@ interface SubtaskListProps {
   onToggle: (id: string) => void;
   onDelete?: (id: string) => void;
   onUpdate?: (id: string, title: string) => void;
-  onAdd?: (title: string) => void;
   maxVisible?: number;
 }
 
@@ -18,13 +17,11 @@ export function SubtaskList({
   onToggle,
   onDelete,
   onUpdate,
-  onAdd,
   maxVisible,
 }: SubtaskListProps) {
   const [showAll, setShowAll] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
-  const [addValue, setAddValue] = useState("");
   const editRef = useRef<HTMLInputElement>(null);
 
   const shown = maxVisible && !showAll ? subtasks.slice(0, maxVisible) : subtasks;
@@ -44,13 +41,6 @@ export function SubtaskList({
     if (editingId && editValue.trim()) onUpdate?.(editingId, editValue.trim());
     setEditingId(null);
     setEditValue("");
-  }
-
-  function handleAdd() {
-    const t = addValue.trim();
-    if (!t) return;
-    onAdd?.(t);
-    setAddValue("");
   }
 
   return (
@@ -118,23 +108,6 @@ export function SubtaskList({
         >
           +{hiddenCount} more
         </button>
-      )}
-
-      {onAdd && (
-        <div className="flex items-center gap-2 pt-1">
-          <div className="w-4 shrink-0" />
-          <input
-            type="text"
-            value={addValue}
-            onChange={(e) => setAddValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); handleAdd(); }
-              if (e.key === "Escape") setAddValue("");
-            }}
-            placeholder="Add a subtask…"
-            className="flex-1 min-w-0 text-sm bg-transparent text-primary placeholder:text-muted-foreground/60 outline-none border-b border-muted-foreground/20 focus:border-quatro-blue pb-0.5 transition-colors"
-          />
-        </div>
       )}
     </div>
   );
