@@ -14,6 +14,7 @@ import { TagSelector } from "@/components/tag-selector";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { RecurrencePicker } from "@/components/recurrence-picker";
 import { useTasks } from "@/context/task-context";
+import { TaskSearchSelect } from "@/components/task-search-select";
 import type { Task } from "@/types/task";
 
 interface EditTaskDialogProps {
@@ -140,19 +141,12 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
 
           <div className="space-y-1.5">
             <Label htmlFor="edit-blocked" className={labelClass}>Blocked by</Label>
-            <select
+            <TaskSearchSelect
               id="edit-blocked"
+              tasks={incompleteTasks}
               value={blockedBy}
-              onChange={(e) => setBlockedBy(e.target.value)}
-              className="w-full bg-muted border-0 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-quatro-blue"
-            >
-              <option value="">None</option>
-              {incompleteTasks.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.title}
-                </option>
-              ))}
-            </select>
+              onChange={setBlockedBy}
+            />
           </div>
 
           <div className="space-y-1.5">

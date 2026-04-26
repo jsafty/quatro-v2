@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useTasks } from "@/context/task-context";
+import { TaskSearchSelect } from "@/components/task-search-select";
 import { useTags } from "@/context/tag-context";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { RecurrencePicker } from "@/components/recurrence-picker";
@@ -189,19 +190,12 @@ export function AddTaskDialog() {
 
           <div className="space-y-1.5">
             <Label htmlFor="task-blocked" className={labelClass}>Blocked by</Label>
-            <select
+            <TaskSearchSelect
               id="task-blocked"
+              tasks={incompleteTasks}
               value={blockedBy}
-              onChange={(e) => setBlockedBy(e.target.value)}
-              className="w-full bg-muted border-0 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-quatro-blue"
-            >
-              <option value="">None</option>
-              {incompleteTasks.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.title}
-                </option>
-              ))}
-            </select>
+              onChange={setBlockedBy}
+            />
           </div>
 
           <div className="space-y-1.5">
