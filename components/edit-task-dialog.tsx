@@ -15,6 +15,7 @@ import { DateTimePicker } from "@/components/date-time-picker";
 import { RecurrencePicker } from "@/components/recurrence-picker";
 import { useTasks } from "@/context/task-context";
 import { TaskSearchSelect } from "@/components/task-search-select";
+import { SubtaskList } from "@/components/subtask-list";
 import type { Task } from "@/types/task";
 
 interface EditTaskDialogProps {
@@ -32,7 +33,8 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
   const [recurrence, setRecurrence] = useState(task.recurrence ?? "");
   const [submitting, setSubmitting] = useState(false);
 
-  const { updateTask, deleteTask, addTagToTask, removeTagFromTask, tasks } = useTasks();
+  const { updateTask, deleteTask, addTagToTask, removeTagFromTask, tasks,
+          createSubtask, updateSubtask, deleteSubtask, toggleSubtask } = useTasks();
 
   const incompleteTasks = tasks.filter((t) => !t.completedAt && t.id !== task.id);
 
@@ -106,6 +108,19 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
               rows={2}
               className={`${inputClass} resize-none w-full max-w-full break-all whitespace-pre-wrap box-border`}
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className={labelClass}>Sub-tasks</Label>
+            <div className="bg-muted rounded-lg px-3 py-2">
+              <SubtaskList
+                subtasks={task.subtasks}
+                onToggle={toggleSubtask}
+                onDelete={deleteSubtask}
+                onUpdate={updateSubtask}
+                onAdd={(title) => createSubtask(task.id, title)}
+              />
+            </div>
           </div>
 
           <div className="space-y-1.5">

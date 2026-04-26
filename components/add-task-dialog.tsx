@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useTasks } from "@/context/task-context";
 import { TaskSearchSelect } from "@/components/task-search-select";
+import { SubtaskList } from "@/components/subtask-list";
+import type { Subtask } from "@/types/subtask";
 import { useTags } from "@/context/tag-context";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { RecurrencePicker } from "@/components/recurrence-picker";
@@ -41,6 +43,7 @@ export function AddTaskDialog() {
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0].value);
   const [savingTag, setSavingTag] = useState(false);
+  const [pendingSubtasks, setPendingSubtasks] = useState<Subtask[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const { createTask, tasks } = useTasks();
@@ -67,6 +70,7 @@ export function AddTaskDialog() {
 
     setBlockedBy("");
     setRecurrence("");
+    setPendingSubtasks([]);
     setSelectedTagIds([]);
     setCreatingTag(false);
     setNewTagName("");
@@ -102,6 +106,7 @@ export function AddTaskDialog() {
       blockedBy: blockedBy || null,
       recurrence: recurrence || null,
       tagIds: selectedTagIds,
+      subtaskTitles: pendingSubtasks.map((s) => s.title).filter(Boolean),
     });
     setOpen(false);
     reset();
@@ -155,6 +160,35 @@ export function AddTaskDialog() {
               rows={2}
               className={`${inputClass} resize-none w-full max-w-full break-all whitespace-pre-wrap box-border`}
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className={labelClass}>Sub-tasks</Label>
+            <div className="bg-muted rounded-lg px-3 py-2">
+              <SubtaskList
+                subtasks={pendingSubtasks}
+                onToggle={() => {}}
+                onDelete={(id) => setPendingSubtasks((prev) => prev.filter((s) => s.id !== id))}
+                onUpdate={(id, title) =>
+                  setPendingSubtasks((prev) =>
+                    prev.map((s) => (s.id === id ? { ...s, title } : s))
+                  )
+                }
+                onAdd={(title) =>
+                  setPendingSubtasks((prev) => [
+                    ...prev,
+                    {
+                      id: crypto.randomUUID(),
+                      taskId: "",
+                      title,
+                      completedAt: null,
+                      position: prev.length,
+                      createdAt: new Date().toISOString(),
+                    },
+                  ])
+                }
+              />
+            </div>
           </div>
 
           <div className="space-y-1.5">

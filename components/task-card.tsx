@@ -7,6 +7,7 @@ import { useTasks } from "@/context/task-context";
 import { useCompletion } from "@/context/completion-context";
 import { EditTaskDialog } from "@/components/edit-task-dialog";
 import { DateTimePicker } from "@/components/date-time-picker";
+import { SubtaskList } from "@/components/subtask-list";
 import type { Task } from "@/types/task";
 
 const RECURRENCE_LABELS: Record<string, string> = {
@@ -73,7 +74,7 @@ export function TaskCard({
 }: TaskCardProps) {
   const [editOpen, setEditOpen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
-  const { uncompleteTask, updateTask, deleteTask } = useTasks();
+  const { uncompleteTask, updateTask, deleteTask, toggleSubtask, deleteSubtask } = useTasks();
   const { phase, startCompletion } = useCompletion();
 
   const isCompleting = phase.type === "pending" && phase.taskId === task.id;
@@ -177,6 +178,21 @@ export function TaskCard({
             <p className="text-xs text-muted-foreground mt-1">
               Waiting on: <span className="font-semibold">{blockerTitle}</span>
             </p>
+          )}
+
+          {/* Subtasks */}
+          {task.subtasks.length > 0 && (
+            <div className="mt-2">
+              <p className="text-xs font-medium text-muted-foreground mb-1.5">
+                {task.subtasks.filter((s) => s.completedAt).length}/{task.subtasks.length} subtasks
+              </p>
+              <SubtaskList
+                subtasks={task.subtasks}
+                onToggle={toggleSubtask}
+                onDelete={deleteSubtask}
+                maxVisible={5}
+              />
+            </div>
           )}
 
           {/* Badges row */}

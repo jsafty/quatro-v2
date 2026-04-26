@@ -7,6 +7,7 @@ import { sortTasks } from "@/lib/priority";
 import { computeNextOccurrence } from "@/lib/recurrence";
 import type { Task } from "@/types/task";
 import type { Tag } from "@/types/tag";
+import type { Subtask } from "@/types/subtask";
 
 export type CreateTaskInput = {
   title: string;
@@ -16,6 +17,7 @@ export type CreateTaskInput = {
   blockedBy?: string | null;
   recurrence?: string | null;
   tagIds?: string[];
+  subtaskTitles?: string[];
 };
 
 export type UpdateTaskInput = {
@@ -44,6 +46,10 @@ type TaskContextValue = {
   reorderTasks: (orderedIds: string[]) => Promise<void>;
   addTagToTask: (taskId: string, tagId: string) => Promise<void>;
   removeTagFromTask: (taskId: string, tagId: string) => Promise<void>;
+  createSubtask: (taskId: string, title: string) => Promise<void>;
+  updateSubtask: (id: string, title: string) => Promise<void>;
+  deleteSubtask: (id: string) => Promise<void>;
+  toggleSubtask: (id: string) => Promise<void>;
 };
 
 function mapRow(row: Record<string, unknown>): Task {
@@ -73,6 +79,18 @@ function mapRow(row: Record<string, unknown>): Task {
     recurrence: (row.recurrence as string | null) ?? null,
     createdAt: row.created_at as string,
     tags,
+    subtasks: [],
+  };
+}
+
+function mapSubtaskRow(row: Record<string, unknown>): Subtask {
+  return {
+    id: row.id as string,
+    taskId: row.task_id as string,
+    title: row.title as string,
+    completedAt: (row.completed_at as string | null) ?? null,
+    position: row.position as number,
+    createdAt: row.created_at as string,
   };
 }
 
@@ -86,23 +104,47 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const fetchTasks = useCallback(async () => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      console.error("fetchTasks: not authenticated", authError);
       setLoading(false);
       return;
     }
 
-    const { data, error: fetchError } = await supabase
-      .from("tasks")
-      .select("*, task_tags(tags(*))")
-      .eq("user_id", user.id)
-      .order("manual_priority", { ascending: true, nullsFirst: false })
-      .order("created_at", { ascending: true });
+    const [tasksResult, subtasksResult] = await Promise.all([
+      supabase
+        .from("tasks")
+        .select("*, task_tags(tags(*))")
+        .eq("user_id", user.id)
+        .order("manual_priority", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("subtasks")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("position", { ascending: true })
+        .order("created_at", { ascending: true }),
+    ]);
 
-    if (fetchError) {
-      console.error("fetchTasks: query failed", fetchError);
-    } else if (data) {
-      setTasks(data.map(mapRow));
+    if (tasksResult.error) {
+      console.error("fetchTasks failed", tasksResult.error);
+      setLoading(false);
+      return;
     }
+
+    const mappedTasks = (tasksResult.data ?? []).map(mapRow);
+
+    if (!subtasksResult.error && subtasksResult.data) {
+      const byTaskId = new Map<string, Subtask[]>();
+      for (const row of subtasksResult.data) {
+        const sub = mapSubtaskRow(row as Record<string, unknown>);
+        const arr = byTaskId.get(sub.taskId) ?? [];
+        arr.push(sub);
+        byTaskId.set(sub.taskId, arr);
+      }
+      for (const task of mappedTasks) {
+        task.subtasks = byTaskId.get(task.id) ?? [];
+      }
+    }
+
+    setTasks(mappedTasks);
     setLoading(false);
   }, [supabase]);
 
@@ -111,19 +153,13 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
     const channel = supabase
       .channel("tasks-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "tasks" },
-        fetchTasks
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, fetchTasks)
+      .on("postgres_changes", { event: "*", schema: "public", table: "subtasks" }, fetchTasks)
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [fetchTasks, supabase]);
 
-  // When a scheduled task's start date passes, promote it to the top of the list
   useEffect(() => {
     const now = new Date();
     const transitioning = tasks.filter((t) => {
@@ -135,9 +171,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       }
       return true;
     });
-
     if (transitioning.length === 0) return;
-
     Promise.all(
       transitioning.map((t) =>
         supabase.from("tasks").update({ manual_priority: 0 }).eq("id", t.id)
@@ -145,20 +179,14 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     ).then(() => fetchTasks());
   }, [tasks, supabase, fetchTasks]);
 
-  // Section filtering
-  const isScheduled = (t: Task) =>
-    !!t.startDate && new Date(t.startDate) > new Date();
-
+  const isScheduled = (t: Task) => !!t.startDate && new Date(t.startDate) > new Date();
   const isBlocked = (t: Task) => {
     if (!t.blockedBy) return false;
     const blocker = tasks.find((b) => b.id === t.blockedBy);
     return !!blocker && !blocker.completedAt;
   };
-
   const isCompleted = (t: Task) => !!t.completedAt;
-
-  const isActionable = (t: Task) =>
-    !isScheduled(t) && !isBlocked(t) && !isCompleted(t);
+  const isActionable = (t: Task) => !isScheduled(t) && !isBlocked(t) && !isCompleted(t);
 
   const actionable = sortTasks(tasks.filter(isActionable));
   const top4 = actionable.slice(0, 4);
@@ -166,20 +194,14 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const scheduledTasks = tasks.filter(isScheduled);
   const blockedTasks = tasks.filter((t) => !isCompleted(t) && isBlocked(t));
   const completedTasks = [...tasks.filter(isCompleted)].sort(
-    (a, b) =>
-      new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime()
+    (a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime()
   );
 
-  // CRUD
   async function createTask(input: CreateTaskInput) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      console.error("createTask: not authenticated", authError);
-      return;
-    }
+    if (authError || !user) return;
 
     const newId = crypto.randomUUID();
-
     const { error: insertError } = await supabase.from("tasks").insert({
       id: newId,
       user_id: user.id,
@@ -195,16 +217,35 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (insertError) {
-      console.error("createTask: insert failed", insertError);
       toast.error("Failed to add task.");
       return;
     }
 
+    const inserts: Promise<{ error: unknown }>[] = [];
+
     if (input.tagIds && input.tagIds.length > 0) {
-      await supabase.from("task_tags").insert(
-        input.tagIds.map((tagId) => ({ task_id: newId, tag_id: tagId }))
+      inserts.push(
+        supabase.from("task_tags").insert(input.tagIds.map((tagId) => ({ task_id: newId, tag_id: tagId }))) as unknown as Promise<{ error: unknown }>
       );
     }
+
+    if (input.subtaskTitles && input.subtaskTitles.length > 0) {
+      inserts.push(
+        supabase.from("subtasks").insert(
+          input.subtaskTitles.map((title, position) => ({
+            id: crypto.randomUUID(),
+            task_id: newId,
+            user_id: user.id,
+            title,
+            completed_at: null,
+            position,
+            created_at: new Date().toISOString(),
+          }))
+        ) as unknown as Promise<{ error: unknown }>
+      );
+    }
+
+    if (inserts.length > 0) await Promise.all(inserts);
 
     await fetchTasks();
     toast.success("Task added.");
@@ -212,7 +253,6 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   async function updateTask(id: string, input: UpdateTaskInput) {
     const update: Record<string, unknown> = {};
-
     if ("title" in input) update.title = input.title;
     if ("description" in input) update.description = input.description ?? null;
     if ("startDate" in input) update.start_date = input.startDate ?? null;
@@ -222,27 +262,20 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     if ("recurrence" in input) update.recurrence = input.recurrence ?? null;
 
     const { error } = await supabase.from("tasks").update(update).eq("id", id);
-    if (error) {
-      toast.error("Failed to save changes.");
-    } else {
-      toast.success("Task updated.");
-    }
+    if (error) toast.error("Failed to save changes.");
+    else toast.success("Task updated.");
     await fetchTasks();
   }
 
   async function deleteTask(id: string) {
     const { error } = await supabase.from("tasks").delete().eq("id", id);
-    if (error) {
-      toast.error("Failed to delete task.");
-    } else {
-      toast.success("Task deleted.");
-    }
+    if (error) toast.error("Failed to delete task.");
+    else toast.success("Task deleted.");
     await fetchTasks();
   }
 
   async function completeTask(id: string) {
     const task = tasks.find((t) => t.id === id);
-
     const { error } = await supabase
       .from("tasks")
       .update({ completed_at: new Date().toISOString(), manual_priority: null })
@@ -253,11 +286,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Spawn next occurrence for recurring tasks
     if (task?.recurrence && task.startDate) {
       const nextStart = computeNextOccurrence(task.startDate, task.recurrence);
       const newId = crypto.randomUUID();
-
       await supabase.from("tasks").insert({
         id: newId,
         user_id: task.userId,
@@ -271,8 +302,6 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         manual_priority: null,
         created_at: new Date().toISOString(),
       });
-
-      // Copy tags to new instance
       if (task.tags.length > 0) {
         await supabase.from("task_tags").insert(
           task.tags.map((tag) => ({ task_id: newId, tag_id: tag.id }))
@@ -284,10 +313,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function uncompleteTask(id: string) {
-    const { error } = await supabase
-      .from("tasks")
-      .update({ completed_at: null })
-      .eq("id", id);
+    const { error } = await supabase.from("tasks").update({ completed_at: null }).eq("id", id);
     if (error) toast.error("Failed to reopen task.");
     await fetchTasks();
   }
@@ -295,10 +321,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   async function reorderTasks(orderedIds: string[]) {
     await Promise.all(
       orderedIds.map((id, index) =>
-        supabase
-          .from("tasks")
-          .update({ manual_priority: index + 1 })
-          .eq("id", id)
+        supabase.from("tasks").update({ manual_priority: index + 1 }).eq("id", id)
       )
     );
     await fetchTasks();
@@ -310,32 +333,54 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function removeTagFromTask(taskId: string, tagId: string) {
+    await supabase.from("task_tags").delete().eq("task_id", taskId).eq("tag_id", tagId);
+    await fetchTasks();
+  }
+
+  async function createSubtask(taskId: string, title: string) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return;
+    const task = tasks.find((t) => t.id === taskId);
+    const position = task ? task.subtasks.length : 0;
+    await supabase.from("subtasks").insert({
+      id: crypto.randomUUID(),
+      task_id: taskId,
+      user_id: user.id,
+      title: title.trim(),
+      completed_at: null,
+      position,
+      created_at: new Date().toISOString(),
+    });
+    await fetchTasks();
+  }
+
+  async function updateSubtask(id: string, title: string) {
+    await supabase.from("subtasks").update({ title }).eq("id", id);
+    await fetchTasks();
+  }
+
+  async function deleteSubtask(id: string) {
+    await supabase.from("subtasks").delete().eq("id", id);
+    await fetchTasks();
+  }
+
+  async function toggleSubtask(id: string) {
+    const sub = tasks.flatMap((t) => t.subtasks).find((s) => s.id === id);
+    if (!sub) return;
     await supabase
-      .from("task_tags")
-      .delete()
-      .eq("task_id", taskId)
-      .eq("tag_id", tagId);
+      .from("subtasks")
+      .update({ completed_at: sub.completedAt ? null : new Date().toISOString() })
+      .eq("id", id);
     await fetchTasks();
   }
 
   return (
     <TaskContext.Provider
       value={{
-        tasks,
-        loading,
-        top4,
-        backlog,
-        scheduledTasks,
-        blockedTasks,
-        completedTasks,
-        createTask,
-        updateTask,
-        deleteTask,
-        completeTask,
-        uncompleteTask,
-        reorderTasks,
-        addTagToTask,
-        removeTagFromTask,
+        tasks, loading, top4, backlog, scheduledTasks, blockedTasks, completedTasks,
+        createTask, updateTask, deleteTask, completeTask, uncompleteTask, reorderTasks,
+        addTagToTask, removeTagFromTask,
+        createSubtask, updateSubtask, deleteSubtask, toggleSubtask,
       }}
     >
       {children}

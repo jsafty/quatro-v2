@@ -1,4 +1,5 @@
 import type { Tag } from "./tag";
+import type { Subtask } from "./subtask";
 
 export interface Task {
   id: string;
@@ -15,4 +16,5 @@ export interface Task {
   recurrence: string | null;
   createdAt: string;
   tags: Tag[];
+  subtasks: Subtask[];
 }
