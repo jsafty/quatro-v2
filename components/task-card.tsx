@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Check, GripVertical, Repeat, Trash2 } from "lucide-react";
 import { useTasks } from "@/context/task-context";
@@ -72,6 +72,7 @@ export function TaskCard({
   blockerTitle,
 }: TaskCardProps) {
   const [editOpen, setEditOpen] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
   const { uncompleteTask, updateTask, deleteTask } = useTasks();
   const { phase, startCompletion } = useCompletion();
 
@@ -81,12 +82,13 @@ export function TaskCard({
   function handleCompleteClick(e: React.MouseEvent) {
     e.stopPropagation();
     if (completed) { uncompleteTask(task.id); return; }
-    if (!isCompleting && !isUndoing) startCompletion(task.id);
+    if (!isCompleting && !isUndoing) startCompletion(task.id, cardRef.current);
   }
 
   return (
     <>
       <motion.div
+        ref={cardRef}
         layout
         initial={{ opacity: 0, x: 0, y: 8 }}
         animate={
