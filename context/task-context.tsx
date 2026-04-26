@@ -201,6 +201,20 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return;
 
+    // Place the new task at the top of the backlog (position 5).
+    // If the first backlog task has an explicit priority, shift all backlog tasks
+    // down by 1 to make room; otherwise the createdAt DESC sort handles it.
+    let initialPriority: number | null = null;
+    if (backlog.length > 0 && backlog[0].manualPriority !== null) {
+      const firstBacklogPriority = backlog[0].manualPriority!;
+      await Promise.all(
+        backlog.map((t, i) =>
+          supabase.from("tasks").update({ manual_priority: firstBacklogPriority + i + 1 }).eq("id", t.id)
+        )
+      );
+      initialPriority = firstBacklogPriority;
+    }
+
     const newId = crypto.randomUUID();
     const { error: insertError } = await supabase.from("tasks").insert({
       id: newId,
@@ -212,7 +226,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       blocked_by: input.blockedBy ?? null,
       recurrence: input.recurrence ?? null,
       completed_at: null,
-      manual_priority: null,
+      manual_priority: initialPriority,
       created_at: new Date().toISOString(),
     });
 

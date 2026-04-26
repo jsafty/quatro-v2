@@ -26,8 +26,7 @@ export function sortTasks(tasks: Task[]): Task[] {
     }
     if (a.manualPriority !== null) return -1;
     if (b.manualPriority !== null) return 1;
-    const diff = computePriority(b) - computePriority(a);
-    if (diff !== 0) return diff;
-    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    // Both null: newest first so newly added tasks appear at the top of the backlog
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 }
