@@ -114,6 +114,23 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
               onChange={(v) => { setStartDate(v ?? ""); if (!v) setRecurrence(""); }}
               placeholder="Not scheduled"
             />
+            {startDate && (
+              <select
+                value={new Date(startDate).getHours()}
+                onChange={(e) => {
+                  const d = new Date(startDate);
+                  d.setHours(Number(e.target.value), 0, 0, 0);
+                  setStartDate(d.toISOString());
+                }}
+                className="w-full bg-muted border-0 rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:ring-1 focus:ring-quatro-blue"
+              >
+                {Array.from({ length: 24 }, (_, i) => {
+                  const h12 = i === 0 ? 12 : i > 12 ? i - 12 : i;
+                  const ampm = i < 12 ? "AM" : "PM";
+                  return <option key={i} value={i}>{h12}:00 {ampm}</option>;
+                })}
+              </select>
+            )}
             <RecurrencePicker
               value={recurrence}
               onChange={setRecurrence}

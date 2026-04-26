@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Clock, CalendarClock, X } from "lucide-react";
 
-type Step = "presets" | "calendar" | "time";
+type Step = "presets" | "calendar";
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const MONTHS = [
@@ -30,40 +30,23 @@ function formatDisplay(iso: string | null): string {
 export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly = false }: DateTimePickerProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("presets");
-  const [fromCalendar, setFromCalendar] = useState(false);
 
-  // Calendar navigation
   const now = new Date();
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [viewMonth, setViewMonth] = useState(now.getMonth());
 
-  // Time picker state
-  const [pendingDate, setPendingDate] = useState<Date | null>(null);
-  const [hour12, setHour12] = useState(8);
-  const [minute, setMinute] = useState(0);
-  const [ampm, setAmpm] = useState<"AM" | "PM">("AM");
-  const [prevValue, setPrevValue] = useState<string | null>(null);
-
-  // Fixed-position dropdown coords (avoids clipping by dialog overflow-y-auto)
   const [dropdownStyle, setDropdownStyle] = useState({ top: 0, left: 0, width: 256 });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const reset = useCallback(() => {
     setStep("presets");
-    setFromCalendar(false);
-    setPendingDate(null);
-    setHour12(8);
-    setMinute(0);
-    setAmpm("AM");
-    setPrevValue(null);
   }, []);
 
   function openPicker() {
     if (triggerRef.current) {
       const r = triggerRef.current.getBoundingClientRect();
       const dropW = 256;
-      // Flip above if not enough space below
       const spaceBelow = window.innerHeight - r.bottom;
       const top = spaceBelow >= 280 ? r.bottom + 6 : r.top - 6;
       const left = Math.min(r.left, window.innerWidth - dropW - 8);
@@ -92,46 +75,10 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
     reset();
   }
 
-  function goToTime(d: Date, fromCal: boolean) {
-    setPrevValue(value);
+  function selectDate(d: Date) {
     const date = new Date(d);
     date.setHours(8, 0, 0, 0);
-    setPendingDate(date);
-    setFromCalendar(fromCal);
-    setHour12(8);
-    setMinute(0);
-    setAmpm("AM");
-    onChange(date.toISOString());
-    setStep("time");
-  }
-
-  function applyTime(h12: number, min: number, ap: "AM" | "PM", base: Date) {
-    const d = new Date(base);
-    let h = h12;
-    if (ap === "AM" && h === 12) h = 0;
-    else if (ap === "PM" && h !== 12) h += 12;
-    d.setHours(h, min, 0, 0);
-    onChange(d.toISOString());
-  }
-
-  function handleHourChange(h: number) {
-    setHour12(h);
-    if (pendingDate) applyTime(h, minute, ampm, pendingDate);
-  }
-
-  function handleMinuteChange(m: number) {
-    setMinute(m);
-    if (pendingDate) applyTime(hour12, m, ampm, pendingDate);
-  }
-
-  function handleAmpmChange(ap: "AM" | "PM") {
-    setAmpm(ap);
-    if (pendingDate) applyTime(hour12, minute, ap, pendingDate);
-  }
-
-  function handleTimeBack() {
-    onChange(prevValue);
-    setStep(fromCalendar ? "calendar" : "presets");
+    applyDirect(date);
   }
 
   function prevMonth() {
@@ -143,7 +90,6 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
     else setViewMonth((m) => m + 1);
   }
 
-  // Build calendar grid (always 6 rows × 7 cols = 42 cells)
   const firstDayOfMonth = new Date(viewYear, viewMonth, 1).getDay();
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
@@ -169,16 +115,15 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
     },
     {
       label: "Tomorrow",
-      action() { const d = new Date(); d.setDate(d.getDate() + 1); goToTime(d, false); },
+      action() { const d = new Date(); d.setDate(d.getDate() + 1); selectDate(d); },
     },
     {
       label: "Next week",
       action() {
         const d = new Date();
-        const day = d.getDay(); // 0=Sun … 6=Sat
-        const daysUntilMonday = (8 - day) % 7 || 7;
+        const daysUntilMonday = (8 - d.getDay()) % 7 || 7;
         d.setDate(d.getDate() + daysUntilMonday);
-        goToTime(d, false);
+        selectDate(d);
       },
     },
     {
@@ -238,7 +183,6 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
           className="fixed z-[200] bg-white rounded-2xl shadow-xl border border-border overflow-hidden"
           style={{ top: dropdownStyle.top, left: dropdownStyle.left, width: dropdownStyle.width }}
         >
-          {/* ── Presets ── */}
           {step === "presets" && (
             <div className="py-1.5">
               {PRESETS.map(({ label, action }) => (
@@ -266,7 +210,6 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
             </div>
           )}
 
-          {/* ── Calendar ── */}
           {step === "calendar" && (
             <div className="p-3">
               <div className="flex items-center justify-between mb-2">
@@ -292,7 +235,7 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
                     <button
                       key={i}
                       type="button"
-                      onClick={() => goToTime(date, true)}
+                      onClick={() => selectDate(date)}
                       className={`h-8 w-full flex items-center justify-center rounded-lg text-xs font-semibold transition-colors ${
                         !inMonth
                           ? "text-muted-foreground/30 hover:bg-muted"
@@ -314,68 +257,6 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
               >
                 ← Back
               </button>
-            </div>
-          )}
-
-          {/* ── Time picker ── */}
-          {step === "time" && pendingDate && (
-            <div className="p-4 space-y-4">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide text-center">
-                {pendingDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-              </p>
-
-              <div className="flex items-center justify-center gap-2">
-                <select
-                  value={hour12}
-                  onChange={(e) => handleHourChange(Number(e.target.value))}
-                  className="bg-muted rounded-lg px-2 py-2 text-sm font-bold text-primary outline-none focus:ring-1 focus:ring-quatro-blue cursor-pointer"
-                >
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
-                    <option key={h} value={h}>{h}</option>
-                  ))}
-                </select>
-                <span className="text-lg font-bold text-primary select-none">:</span>
-                <select
-                  value={minute}
-                  onChange={(e) => handleMinuteChange(Number(e.target.value))}
-                  className="bg-muted rounded-lg px-2 py-2 text-sm font-bold text-primary outline-none focus:ring-1 focus:ring-quatro-blue cursor-pointer"
-                >
-                  {[0, 15, 30, 45].map((m) => (
-                    <option key={m} value={m}>{String(m).padStart(2, "0")}</option>
-                  ))}
-                </select>
-                <div className="flex rounded-lg overflow-hidden border border-border">
-                  {(["AM", "PM"] as const).map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => handleAmpmChange(p)}
-                      className={`px-2.5 py-2 text-xs font-bold transition-colors ${
-                        ampm === p ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleTimeBack}
-                  className="flex-1 py-2 text-sm font-semibold text-muted-foreground hover:text-primary border border-border rounded-lg transition-colors"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setOpen(false); reset(); }}
-                  className="flex-1 py-2 text-sm font-bold bg-primary text-white rounded-lg hover:bg-quatro-blue transition-colors"
-                >
-                  Done
-                </button>
-              </div>
             </div>
           )}
         </div>,
