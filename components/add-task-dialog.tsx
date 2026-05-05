@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, X } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Plus, X, Calendar } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,8 @@ import type { Subtask } from "@/types/subtask";
 import { useTags } from "@/context/tag-context";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { RecurrencePicker } from "@/components/recurrence-picker";
+import { parseDateFromTitle, formatDetectedDate } from "@/lib/parse-task-input";
+import type { Tag } from "@/types/tag";
 
 const TAG_COLORS = [
   { value: "#077ec0", label: "Blue" },
@@ -35,7 +37,6 @@ export function AddTaskDialog() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
-
   const [blockedBy, setBlockedBy] = useState("");
   const [recurrence, setRecurrence] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
@@ -48,9 +49,37 @@ export function AddTaskDialog() {
   const [subtaskInputValue, setSubtaskInputValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Date parsing state
+  const [detectedDate, setDetectedDate] = useState<Date | null>(null);
+  const [dateDismissed, setDateDismissed] = useState(false);
+
+  // Tag autocomplete state
+  const [tagQuery, setTagQuery] = useState<string | null>(null); // null = closed
+  const [tagSuggestionIndex, setTagSuggestionIndex] = useState(0);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
   const { createTask, tasks } = useTasks();
   const { tags, createTag } = useTags();
   const incompleteTasks = tasks.filter((t) => !t.completedAt);
+
+  // Parse date from title as user types
+  useEffect(() => {
+    if (dateDismissed) return;
+    const { detectedDate: d } = parseDateFromTitle(title);
+    setDetectedDate(d);
+  }, [title, dateDismissed]);
+
+  const filteredTagSuggestions: Tag[] = tagQuery === null
+    ? []
+    : tags.filter(
+        (t) =>
+          !selectedTagIds.includes(t.id) &&
+          t.name.toLowerCase().includes(tagQuery.toLowerCase())
+      );
+
+  useEffect(() => {
+    setTagSuggestionIndex(0);
+  }, [tagQuery]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -69,7 +98,6 @@ export function AddTaskDialog() {
     setTitle("");
     setDescription("");
     setStartDate("");
-
     setBlockedBy("");
     setRecurrence("");
     setPendingSubtasks([]);
@@ -79,12 +107,71 @@ export function AddTaskDialog() {
     setCreatingTag(false);
     setNewTagName("");
     setNewTagColor(TAG_COLORS[0].value);
+    setDetectedDate(null);
+    setDateDismissed(false);
+    setTagQuery(null);
   }
 
   function toggleTag(tagId: string) {
     setSelectedTagIds((prev) =>
       prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
     );
+  }
+
+  // Detect # in title input and manage tag autocomplete
+  const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setTitle(val);
+
+    const cursor = e.target.selectionStart ?? val.length;
+    const textBeforeCursor = val.slice(0, cursor);
+    const hashIndex = textBeforeCursor.lastIndexOf("#");
+
+    if (hashIndex !== -1) {
+      const fragment = textBeforeCursor.slice(hashIndex + 1);
+      // Only open if fragment has no spaces (still typing the tag name)
+      if (!fragment.includes(" ")) {
+        setTagQuery(fragment);
+        return;
+      }
+    }
+    setTagQuery(null);
+  }, []);
+
+  function selectTagSuggestion(tag: Tag) {
+    const input = titleInputRef.current;
+    if (!input) return;
+    const cursor = input.selectionStart ?? title.length;
+    const hashIndex = title.lastIndexOf("#", cursor);
+    if (hashIndex === -1) return;
+
+    const newTitle = title.slice(0, hashIndex) + title.slice(cursor);
+    setTitle(newTitle.trimEnd());
+    setSelectedTagIds((prev) => prev.includes(tag.id) ? prev : [...prev, tag.id]);
+    setTagQuery(null);
+
+    // Restore focus after state update
+    setTimeout(() => {
+      input.focus();
+      const pos = hashIndex;
+      input.setSelectionRange(pos, pos);
+    }, 0);
+  }
+
+  function handleTitleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (tagQuery === null) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setTagSuggestionIndex((i) => Math.min(i + 1, filteredTagSuggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setTagSuggestionIndex((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter" && filteredTagSuggestions.length > 0) {
+      e.preventDefault();
+      selectTagSuggestion(filteredTagSuggestions[tagSuggestionIndex]);
+    } else if (e.key === "Escape") {
+      setTagQuery(null);
+    }
   }
 
   async function handleCreateTag() {
@@ -102,10 +189,15 @@ export function AddTaskDialog() {
     e.preventDefault();
     if (!title.trim() || submitting) return;
     setSubmitting(true);
+
+    const { cleanTitle, detectedDate: parsed } = parseDateFromTitle(title);
+    const finalTitle = cleanTitle.trim() || title.trim();
+    const finalStartDate = startDate || (!dateDismissed && parsed ? parsed.toISOString() : null);
+
     await createTask({
-      title: title.trim(),
+      title: finalTitle,
       description: description.trim() || null,
-      startDate: startDate || null,
+      startDate: finalStartDate,
       dueDate: null,
       blockedBy: blockedBy || null,
       recurrence: recurrence || null,
@@ -119,6 +211,8 @@ export function AddTaskDialog() {
 
   const inputClass = "bg-muted border-0 focus-visible:ring-1 focus-visible:ring-quatro-blue rounded-lg text-sm";
   const labelClass = "text-sm font-semibold text-primary";
+
+  const effectiveStartDate = startDate || (!dateDismissed && detectedDate ? detectedDate.toISOString() : "");
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
@@ -143,15 +237,60 @@ export function AddTaskDialog() {
             <Label htmlFor="task-title" className={labelClass}>
               Summary <span className="text-destructive">*</span>
             </Label>
-            <Input
-              id="task-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="What needs to get done?"
-              required
-              autoFocus
-              className={inputClass}
-            />
+            <div className="relative">
+              <Input
+                id="task-title"
+                ref={titleInputRef}
+                value={title}
+                onChange={handleTitleChange}
+                onKeyDown={handleTitleKeyDown}
+                placeholder="What needs to get done?"
+                required
+                autoFocus
+                autoComplete="off"
+                className={inputClass}
+              />
+
+              {/* Tag autocomplete dropdown */}
+              {tagQuery !== null && filteredTagSuggestions.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white rounded-xl shadow-lg border border-border overflow-hidden">
+                  {filteredTagSuggestions.map((tag, i) => (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); selectTagSuggestion(tag); }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
+                        i === tagSuggestionIndex ? "bg-muted" : "hover:bg-muted"
+                      }`}
+                    >
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: tag.color }}
+                      />
+                      <span className="font-semibold text-primary">{tag.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Detected date badge */}
+            {detectedDate && !dateDismissed && !startDate && (
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-quatro-blue bg-quatro-blue/10 rounded-full px-2.5 py-1">
+                  <Calendar size={11} />
+                  {formatDetectedDate(detectedDate)}
+                  <button
+                    type="button"
+                    onClick={() => { setDateDismissed(true); setDetectedDate(null); }}
+                    className="ml-0.5 hover:opacity-70 transition-opacity"
+                    aria-label="Dismiss detected date"
+                  >
+                    <X size={10} strokeWidth={2.5} />
+                  </button>
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5 min-w-0 overflow-hidden">
@@ -166,7 +305,7 @@ export function AddTaskDialog() {
             />
           </div>
 
-          {/* Subtasks — rendered inline below description */}
+          {/* Subtasks */}
           {pendingSubtasks.length > 0 && (
             <div className="pl-0.5">
               <SubtaskList
@@ -218,15 +357,19 @@ export function AddTaskDialog() {
           <div className="space-y-1.5">
             <Label className={labelClass}>Start date</Label>
             <DateTimePicker
-              value={startDate || null}
-              onChange={(v) => { setStartDate(v ?? ""); if (!v) setRecurrence(""); }}
+              value={effectiveStartDate || null}
+              onChange={(v) => {
+                setStartDate(v ?? "");
+                setDateDismissed(true);
+                if (!v) setRecurrence("");
+              }}
               placeholder="Not scheduled"
             />
-            {startDate && (
+            {effectiveStartDate && (
               <select
-                value={new Date(startDate).getHours()}
+                value={new Date(effectiveStartDate).getHours()}
                 onChange={(e) => {
-                  const d = new Date(startDate);
+                  const d = new Date(effectiveStartDate);
                   d.setHours(Number(e.target.value), 0, 0, 0);
                   setStartDate(d.toISOString());
                 }}
@@ -242,7 +385,7 @@ export function AddTaskDialog() {
             <RecurrencePicker
               value={recurrence}
               onChange={setRecurrence}
-              disabled={!startDate}
+              disabled={!effectiveStartDate}
             />
           </div>
 
