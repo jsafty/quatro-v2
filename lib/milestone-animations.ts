@@ -14,12 +14,12 @@ async function fetchRandomGifUrl(): Promise<string | null> {
   }
 }
 
-function showGifOverlay(gifUrl: string): void {
+function showGifOverlay(gifUrl: string, count: number): void {
   const overlay = document.createElement("div");
   overlay.style.cssText = `
     position:fixed;inset:0;z-index:9999;
-    display:flex;align-items:center;justify-content:center;
-    background:rgba(0,0,0,0.5);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+    background:rgba(0,0,0,0.6);
     animation:_msOverlayIn 0.25s ease forwards;
     cursor:pointer;
   `;
@@ -38,16 +38,26 @@ function showGifOverlay(gifUrl: string): void {
     document.head.appendChild(style);
   }
 
+  const headline = document.createElement("p");
+  headline.textContent = `${count} tasks completed today!`;
+  headline.style.cssText = `
+    font-size:22px;font-weight:800;color:#ffffff;
+    font-family:Inter,sans-serif;letter-spacing:-0.025em;
+    margin:0;text-align:center;
+    animation:_msGifIn 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    text-shadow:0 2px 12px rgba(0,0,0,0.4);
+  `;
+
   const img = document.createElement("img");
   img.src = gifUrl;
   img.style.cssText = `
-    max-width:min(420px,90vw);max-height:70vh;
+    max-width:min(420px,90vw);max-height:60vh;
     border-radius:16px;object-fit:contain;
     animation:_msGifIn 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards;
     box-shadow:0 24px 64px rgba(0,0,0,0.4);
   `;
 
-  overlay.appendChild(img);
+  overlay.append(headline, img);
   document.body.appendChild(overlay);
 
   let dismissed = false;
@@ -64,10 +74,10 @@ function showGifOverlay(gifUrl: string): void {
 
 export async function triggerMilestoneFirework(_cardRect: DOMRect): Promise<void> {
   const url = await fetchRandomGifUrl();
-  if (url) showGifOverlay(url);
+  if (url) showGifOverlay(url, 5);
 }
 
 export async function triggerMilestoneOverlay(): Promise<void> {
   const url = await fetchRandomGifUrl();
-  if (url) showGifOverlay(url);
+  if (url) showGifOverlay(url, 10);
 }
