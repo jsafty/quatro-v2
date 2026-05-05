@@ -161,6 +161,26 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   }, [fetchTasks, supabase]);
 
   useEffect(() => {
+    function msUntilNext8am(): number {
+      const now = new Date();
+      const next = new Date(now);
+      next.setHours(8, 0, 0, 0);
+      if (next <= now) next.setDate(next.getDate() + 1);
+      return next.getTime() - now.getTime();
+    }
+
+    let timeoutId: ReturnType<typeof setTimeout>;
+    function scheduleRefresh() {
+      timeoutId = setTimeout(() => {
+        fetchTasks();
+        scheduleRefresh();
+      }, msUntilNext8am());
+    }
+    scheduleRefresh();
+    return () => clearTimeout(timeoutId);
+  }, [fetchTasks]);
+
+  useEffect(() => {
     const now = new Date();
     const transitioning = tasks.filter((t) => {
       if (!t.startDate || t.manualPriority !== null || t.completedAt) return false;
