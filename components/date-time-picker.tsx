@@ -103,6 +103,7 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
     cells.push({ date: new Date(viewYear, viewMonth + 1, cells.length - firstDayOfMonth - daysInMonth + 1), inMonth: false });
 
   const todayStr = new Date().toDateString();
+  const selectedStr = value ? new Date(value).toDateString() : todayStr;
 
   const PRESETS = [
     {
@@ -231,13 +232,16 @@ export function DateTimePicker({ value, onChange, placeholder = "None", iconOnly
               <div className="grid grid-cols-7">
                 {cells.map(({ date, inMonth }, i) => {
                   const isToday = date.toDateString() === todayStr;
+                  const isSelected = date.toDateString() === selectedStr;
                   return (
                     <button
                       key={i}
                       type="button"
                       onClick={() => selectDate(date)}
                       className={`h-8 w-full flex items-center justify-center rounded-lg text-xs font-semibold transition-colors ${
-                        !inMonth
+                        isSelected
+                          ? "bg-primary text-white"
+                          : !inMonth
                           ? "text-muted-foreground/30 hover:bg-muted"
                           : isToday
                           ? "text-quatro-blue font-bold hover:bg-primary hover:text-white"
