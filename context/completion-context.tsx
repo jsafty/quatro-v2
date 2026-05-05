@@ -18,7 +18,7 @@ type CompletionContextValue = {
 
 const CompletionContext = createContext<CompletionContextValue | null>(null);
 
-const TOAST_MS = 4000;
+const TOAST_MS = 1000;
 const UNDO_ANIM_MS = 500;
 
 function getTodayKey(): string {
