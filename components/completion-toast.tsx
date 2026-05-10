@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useCompletion } from "@/context/completion-context";
 
-const DURATION = 4000;
+const DURATION = 3000;
 
 export function CompletionToast() {
   const { phase, undo } = useCompletion();

@@ -3,6 +3,7 @@
 import { AnimatePresence } from "framer-motion";
 import { useTasks } from "@/context/task-context";
 import { useTags } from "@/context/tag-context";
+import { useCompletion } from "@/context/completion-context";
 import { TaskCard } from "@/components/task-card";
 import { TagFilterBar } from "@/components/tag-filter-bar";
 import { MobileFilterTrigger, MobileFilterPills } from "@/components/mobile-filter-sheet";
@@ -10,10 +11,11 @@ import { MobileFilterTrigger, MobileFilterPills } from "@/components/mobile-filt
 export default function BlockedPage() {
   const { blockedTasks, tasks, loading } = useTasks();
   const { selectedTagIds } = useTags();
+  const { completingTaskId } = useCompletion();
 
-  const filtered = selectedTagIds.length === 0
-    ? blockedTasks
-    : blockedTasks.filter((t) => t.tags.some((tag) => selectedTagIds.includes(tag.id)));
+  const filtered = blockedTasks
+    .filter((t) => t.id !== completingTaskId)
+    .filter((t) => selectedTagIds.length === 0 || t.tags.some((tag) => selectedTagIds.includes(tag.id)));
 
   return (
     <div>

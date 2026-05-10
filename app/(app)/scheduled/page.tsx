@@ -3,6 +3,7 @@
 import { AnimatePresence } from "framer-motion";
 import { useTasks } from "@/context/task-context";
 import { useTags } from "@/context/tag-context";
+import { useCompletion } from "@/context/completion-context";
 import { TaskCard } from "@/components/task-card";
 import { AddTaskDialog } from "@/components/add-task-dialog";
 import { TagFilterBar } from "@/components/tag-filter-bar";
@@ -18,8 +19,9 @@ function formatDate(dateStr: string): string {
 export default function ScheduledPage() {
   const { scheduledTasks, loading } = useTasks();
   const { selectedTagIds } = useTags();
+  const { completingTaskId } = useCompletion();
 
-  const sorted = [...scheduledTasks].sort((a, b) => {
+  const sorted = [...scheduledTasks].filter((t) => t.id !== completingTaskId).sort((a, b) => {
     if (!a.startDate || !b.startDate) return 0;
     return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
   });

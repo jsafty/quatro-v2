@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, GripVertical, Repeat, Trash2 } from "lucide-react";
+import { Repeat, Trash2 } from "lucide-react";
 import { useTasks } from "@/context/task-context";
 import { useCompletion } from "@/context/completion-context";
 import { EditTaskDialog } from "@/components/edit-task-dialog";
@@ -73,69 +73,42 @@ export function TaskCard({
   blockerTitle,
 }: TaskCardProps) {
   const [editOpen, setEditOpen] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
   const { uncompleteTask, updateTask, deleteTask, toggleSubtask, deleteSubtask } = useTasks();
-  const { phase, startCompletion } = useCompletion();
-
-  const isCompleting = phase.type === "pending" && phase.taskId === task.id;
-  const isUndoing    = phase.type === "undoing"  && phase.taskId === task.id;
+  const { startCompletion } = useCompletion();
 
   function handleCompleteClick(e: React.MouseEvent) {
     e.stopPropagation();
     if (completed) { uncompleteTask(task.id); return; }
-    if (!isCompleting && !isUndoing) startCompletion(task.id, cardRef.current);
+    startCompletion(task.id);
   }
 
   return (
     <>
       <motion.div
-        ref={cardRef}
         layout
-        initial={{ opacity: 0, x: 0, y: 8 }}
-        animate={
-          isCompleting
-            ? { opacity: 0, x: "110%", y: 0 }
-            : { opacity: 1, x: 0, y: 0 }
-        }
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -8 }}
-        transition={
-          isCompleting
-            ? {
-                opacity: { duration: 0.2, ease: "easeIn" },
-                x: { duration: 0.28, ease: [0.4, 0, 1, 1] },
-              }
-            : isUndoing
-            ? {
-                opacity: { duration: 0.2, ease: "easeOut" },
-                x: { duration: 0.3, ease: [0.4, 0, 1, 1] },
-              }
-            : { duration: 0.2, ease: "easeOut" }
-        }
-        onClick={() => { if (!isCompleting && !isUndoing) setEditOpen(true); }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        onClick={() => setEditOpen(true)}
         className="group relative bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border-l-4 p-4 flex gap-3 cursor-pointer w-full min-w-0 overflow-hidden box-border"
         style={{ borderLeftColor: rankBorderColor(rank) }}
       >
-        {/* Drag handle — wired up in drag-and-drop phase */}
-        <GripVertical
-          size={16}
-          className="shrink-0 mt-0.5 text-muted-foreground/30 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity hidden md:block"
-          onClick={(e) => e.stopPropagation()}
-        />
-
         {/* Complete / uncomplete */}
         <button
           onClick={handleCompleteClick}
           className={`shrink-0 mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
             completed
               ? "bg-quatro-blue border-quatro-blue text-white"
-              : isCompleting
-              ? "border-transparent text-white"
               : "border-muted-foreground hover:border-quatro-blue hover:bg-quatro-blue/10"
           }`}
-          style={isCompleting ? { backgroundColor: "#1D9E75", borderColor: "#1D9E75" } : {}}
           aria-label={completed ? "Mark incomplete" : "Mark complete"}
         >
-          {(completed || isCompleting) && <Check size={10} strokeWidth={3} />}
+          {completed && (
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
         </button>
 
         {/* Hover actions — desktop only */}

@@ -7,19 +7,18 @@ import { triggerMilestoneFirework, triggerMilestoneOverlay } from "@/lib/milesto
 
 type Phase =
   | { type: "idle" }
-  | { type: "pending"; taskId: string }
-  | { type: "undoing"; taskId: string };
+  | { type: "pending"; taskId: string };
 
 type CompletionContextValue = {
   phase: Phase;
-  startCompletion: (taskId: string, cardElement?: HTMLElement | null) => void;
+  completingTaskId: string | null;
+  startCompletion: (taskId: string) => void;
   undo: () => void;
 };
 
 const CompletionContext = createContext<CompletionContextValue | null>(null);
 
-const TOAST_MS = 1000;
-const UNDO_ANIM_MS = 500;
+const TOAST_MS = 3000;
 
 function getTodayKey(): string {
   const d = new Date();
@@ -44,10 +43,9 @@ function saveMilestoneState(state: { date: string; lastMilestone: number }) {
 
 export function CompletionProvider({ children }: { children: React.ReactNode }) {
   const [phase, setPhase] = useState<Phase>({ type: "idle" });
+  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingIdRef = useRef<string | null>(null);
-  const cardRectRef = useRef<DOMRect | null>(null);
   const supabase = createClient();
 
   const { completeTask } = useTasks();
@@ -56,10 +54,9 @@ export function CompletionProvider({ children }: { children: React.ReactNode }) 
 
   const clearTimers = useCallback(() => {
     if (commitTimerRef.current) { clearTimeout(commitTimerRef.current); commitTimerRef.current = null; }
-    if (undoTimerRef.current)   { clearTimeout(undoTimerRef.current);   undoTimerRef.current = null; }
   }, []);
 
-  async function checkMilestone(cardRect: DOMRect | null) {
+  async function checkMilestone() {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
@@ -81,45 +78,44 @@ export function CompletionProvider({ children }: { children: React.ReactNode }) 
     } else if (count >= 5 && state.lastMilestone < 5) {
       state.lastMilestone = 5;
       saveMilestoneState(state);
-      if (cardRect) triggerMilestoneFirework(cardRect);
+      triggerMilestoneFirework(new DOMRect());
     }
   }
 
-  const startCompletion = useCallback((taskId: string, cardElement?: HTMLElement | null) => {
+  const startCompletion = useCallback((taskId: string) => {
+    // If another task was pending, commit it immediately
     if (pendingIdRef.current && pendingIdRef.current !== taskId) {
       clearTimers();
-      completeTaskRef.current(pendingIdRef.current);
+      const prevId = pendingIdRef.current;
+      completeTaskRef.current(prevId);
     }
     clearTimers();
     pendingIdRef.current = taskId;
-    cardRectRef.current = cardElement ? cardElement.getBoundingClientRect() : null;
+    setCompletingTaskId(taskId);
     setPhase({ type: "pending", taskId });
 
     commitTimerRef.current = setTimeout(async () => {
       const id = pendingIdRef.current;
       if (!id) return;
-      const rect = cardRectRef.current;
       pendingIdRef.current = null;
-      cardRectRef.current = null;
+      setCompletingTaskId(null);
       setPhase({ type: "idle" });
       await completeTaskRef.current(id);
-      await checkMilestone(rect);
+      await checkMilestone();
     }, TOAST_MS);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clearTimers]);
 
   const undo = useCallback(() => {
-    const taskId = pendingIdRef.current;
-    if (!taskId) return;
+    if (!pendingIdRef.current) return;
     clearTimers();
     pendingIdRef.current = null;
-    cardRectRef.current = null;
-    setPhase({ type: "undoing", taskId });
-    undoTimerRef.current = setTimeout(() => setPhase({ type: "idle" }), UNDO_ANIM_MS);
+    setCompletingTaskId(null);
+    setPhase({ type: "idle" });
   }, [clearTimers]);
 
   return (
-    <CompletionContext.Provider value={{ phase, startCompletion, undo }}>
+    <CompletionContext.Provider value={{ phase, completingTaskId, startCompletion, undo }}>
       {children}
     </CompletionContext.Provider>
   );

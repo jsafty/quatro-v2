@@ -18,6 +18,7 @@ import {
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useTasks } from "@/context/task-context";
 import { useTags } from "@/context/tag-context";
+import { useCompletion } from "@/context/completion-context";
 import { SortableTaskCard } from "@/components/sortable-task-card";
 import { AddTaskDialog } from "@/components/add-task-dialog";
 import { TagFilterBar } from "@/components/tag-filter-bar";
@@ -26,6 +27,7 @@ import { MobileFilterTrigger, MobileFilterPills } from "@/components/mobile-filt
 export default function TasksPage() {
   const { top4, backlog, loading, reorderTasks } = useTasks();
   const { selectedTagIds } = useTags();
+  const { completingTaskId } = useCompletion();
   const [backlogOpen, setBacklogOpen] = useState(true);
 
   const sensors = useSensors(
@@ -35,7 +37,7 @@ export default function TasksPage() {
   );
 
   // Full ordered list — used by dnd-kit for correct index calculations
-  const allActionable = [...top4, ...backlog];
+  const allActionable = [...top4, ...backlog].filter((t) => t.id !== completingTaskId);
   const allIds = allActionable.map((t) => t.id);
 
   // Apply tag filter then re-split into Top 4 / Backlog
